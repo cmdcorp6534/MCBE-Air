@@ -7,7 +7,6 @@ import * as utils from './utils';
 import * as config from './config';
 import * as texts from './texts';
 
-// ItemStack 动态属性不支持可堆叠物品，面板木棍改用 typeId + nameTag 识别。
 /**
  * @param { mc.ItemStack | undefined } itemStack
  * @returns { boolean }
@@ -16,7 +15,6 @@ const isFlightStick = (itemStack) =>
     itemStack?.typeId === vanilla.MinecraftItemTypes.Stick &&
     itemStack?.nameTag === texts.STICK_NAME;
 
-// const elytra = () => new mc.ItemStack(vanilla.MinecraftItemTypes.Elytra, 1);
 const elytra = () => {
     const etr = new mc.ItemStack(vanilla.MinecraftItemTypes.Elytra, 1);
     const etrComp = etr.getComponent(mc.ItemComponentTypes.Durability);
