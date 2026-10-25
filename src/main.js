@@ -2,7 +2,6 @@
 'use strict';
 
 import * as mc from '@minecraft/server';
-import * as mcmath from '@minecraft/math';
 import * as vanilla from '@minecraft/vanilla-data';
 import * as utils from './utils';
 import * as config from './config';
@@ -25,7 +24,6 @@ const elytra = () => {
     etrComp.unbreakable = true;
     return etr;
 }
-const firework = () => new mc.ItemStack(vanilla.MinecraftItemTypes.FireworkRocket, 64);
 const stick = () => {
     const stk = new mc.ItemStack(vanilla.MinecraftItemTypes.Stick, 1);
     stk.nameTag = texts.STICK_NAME;
@@ -42,15 +40,8 @@ const stick = () => {
             if (!inventoryComp?.isValid) return;
             const containerComp = inventoryComp.container;
             if (!containerComp?.isValid) return;
-            // 优先使用已有的面板木棍；没有则放入第一个空槽，避免覆盖 0 号槽原有物品。
-            /** @type { number | undefined } */
-            let emptySlot;
-            for (let i = 0; i < containerComp.size; i++) {
-                const item = containerComp.getItem(i);
-                if (isFlightStick(item)) return;
-                if (item === undefined && emptySlot === undefined) emptySlot = i;
-            }
-            if (emptySlot !== undefined) containerComp.setItem(emptySlot, stick());
+            const firstHotbar = containerComp.getItem(0);
+            if (!isFlightStick(firstHotbar)) containerComp.setItem(0, stick());
         });
         mc.system.run(setStick);
     }
@@ -132,7 +123,7 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                 return;
             }
             else if (choice.id === 3) {
-                p.addItem(firework());
+                p.runCommand(`give @s firework_rocket 64 ${config.FW_DATA}`);
                 consoleData.choice = undefined;
                 utils.writeFlightConsole(p, consoleData);
                 return;
