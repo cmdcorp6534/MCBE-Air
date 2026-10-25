@@ -92,28 +92,28 @@ export function getConsoleText(data, pl) {
     const speed = mcmath.Vector3Utils.magnitude(velocity);
     const groundSpeed = mcmath.VectorXZUtils.magnitude(groundVelocity);
     const txt = [
-        '------',
-        `§l${texts.CHOICE_TITLE}`,
-        `${(data.choice?.id === 1) ? '*' : ' '} ${texts.AP}`,
-        `${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
-        `${(data.choice?.id === 3) ? '*' : ' '} ${texts.FWR}`,
-        `${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
-        `§a${(data.choice !== undefined) ? data.choice.remains : 'N/A'}`,
-        '------',
-        `§l${texts.AP_TITLE}`,
+        '§r------',
+        `§r§l${texts.CHOICE_TITLE}`,
+        `§r${(data.choice?.id === 1) ? '*' : ' '} ${texts.AP}`,
+        `§r${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
+        `§r${(data.choice?.id === 3) ? '*' : ' '} ${texts.FWR}`,
+        `§r${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
+        `§r§a${(data.choice !== undefined) ? data.choice.remains : 'N/A'}`,
+        '§r------',
+        `§r§l${texts.AP_TITLE}`,
         (data.ap.waypoint !== undefined)
-        ? `§c${data.ap.waypoint.x.toFixed(2)} §9${data.ap.waypoint.z.toFixed(2)}`
-        : `§e${texts.AP_WP_UD}`,
+        ? `§r§c${data.ap.waypoint.x.toFixed(2)} §9${data.ap.waypoint.z.toFixed(2)}`
+        : `§r§e${texts.AP_WP_UD}`,
         (data.ap.status)
-        ? `§a${texts.AP_ON}`
+        ? `§r§a${texts.AP_ON}`
         : ((data.ap.disableReason === undefined)
-            ? `§e${texts.AP_OFF}`
-            : `§c${data.ap.disableReason}`
+            ? `§r§e${texts.AP_OFF}`
+            : `§r§c${data.ap.disableReason}`
         ),
-        '------',
-        `§lSPD §r§a${speed.toFixed(2)}  §r§lGDS §r§a${groundSpeed.toFixed(2)}`,
-        `§lVTV §r§a${velocity.y.toFixed(2)}  §r§lALT §r§a${calcAlt(pl).toFixed(2)}`,
-        `§lXRT §r§a${pl.getRotation().x}  §r§lYRT §r§a${pl.getRotation().y}`,
+        '§r------',
+        `§r§lSpeed §r§a${speed.toFixed(2)}  §r§lGroundSpeed §r§a${groundSpeed.toFixed(2)}  §r§lVerticalVelocity §r§a${velocity.y.toFixed(2)}`,
+        `§r§lAltitude §r§a${calcAlt(pl).toFixed(2)}  §r§lRotationX §r§a${pl.getRotation().x.toFixed(2)}  §r§lRotationY §r§a${pl.getRotation().y.toFixed(2)}`,
+        `§r------\n\n\n`
     ];
     return txt.join('\n');
 }

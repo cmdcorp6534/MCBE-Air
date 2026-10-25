@@ -3906,7 +3906,6 @@ import * as mc from "@minecraft/server";
 
 // development_behavior_packs/cmdcorp_Air/src/config.js
 var AP_SYSTEM = "AUTO_PILOT_DATA";
-var STICK_PROP = "MENU_STICK";
 var CHOICE_REMAIN_TICKS = 60;
 var AP_ALT_REQUIREMENT = 30;
 var AP_DISTANCE_REQUIREMENT = 50;
@@ -3974,26 +3973,30 @@ function getConsoleText(data, pl) {
   const speed = Vector3Utils.magnitude(velocity);
   const groundSpeed = VectorXZUtils.magnitude(groundVelocity);
   const txt = [
-    "------",
-    `\xA7l${CHOICE_TITLE}`,
-    `${data.choice?.id === 1 ? "*" : " "} ${AP}`,
-    `${data.choice?.id === 2 ? "*" : " "} ${ELY}`,
-    `${data.choice?.id === 3 ? "*" : " "} ${FWR}`,
-    `${data.choice?.id === 4 ? "*" : " "} ${EXIT}`,
-    `\xA7a${data.choice !== void 0 ? data.choice.remains : "N/A"}`,
-    "------",
-    `\xA7l${AP_TITLE}`,
-    data.ap.waypoint !== void 0 ? `\xA7c${data.ap.waypoint.x.toFixed(2)} \xA79${data.ap.waypoint.z.toFixed(2)}` : `\xA7e${AP_WP_UD}`,
-    data.ap.status ? `\xA7a${AP_ON}` : data.ap.disableReason === void 0 ? `\xA7e${AP_OFF}` : `\xA7c${data.ap.disableReason}`,
-    "------",
-    `\xA7lSPD \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGDS \xA7r\xA7a${groundSpeed.toFixed(2)}`,
-    `\xA7lVTV \xA7r\xA7a${velocity.y.toFixed(2)}  \xA7r\xA7lALT \xA7r\xA7a${calcAlt(pl).toFixed(2)}`,
-    `\xA7lXRT \xA7r\xA7a${pl.getRotation().x}  \xA7r\xA7lYRT \xA7r\xA7a${pl.getRotation().y}`
+    "\xA7r------",
+    `\xA7r\xA7l${CHOICE_TITLE}`,
+    `\xA7r${data.choice?.id === 1 ? "*" : " "} ${AP}`,
+    `\xA7r${data.choice?.id === 2 ? "*" : " "} ${ELY}`,
+    `\xA7r${data.choice?.id === 3 ? "*" : " "} ${FWR}`,
+    `\xA7r${data.choice?.id === 4 ? "*" : " "} ${EXIT}`,
+    `\xA7r\xA7a${data.choice !== void 0 ? data.choice.remains : "N/A"}`,
+    "\xA7r------",
+    `\xA7r\xA7l${AP_TITLE}`,
+    data.ap.waypoint !== void 0 ? `\xA7r\xA7c${data.ap.waypoint.x.toFixed(2)} \xA79${data.ap.waypoint.z.toFixed(2)}` : `\xA7r\xA7e${AP_WP_UD}`,
+    data.ap.status ? `\xA7r\xA7a${AP_ON}` : data.ap.disableReason === void 0 ? `\xA7r\xA7e${AP_OFF}` : `\xA7r\xA7c${data.ap.disableReason}`,
+    "\xA7r------",
+    `\xA7r\xA7lSpeed \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGroundSpeed \xA7r\xA7a${groundSpeed.toFixed(2)}  \xA7r\xA7lVerticalVelocity \xA7r\xA7a${velocity.y.toFixed(2)}`,
+    `\xA7r\xA7lAltitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7lRotationX \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lRotationY \xA7r\xA7a${pl.getRotation().y.toFixed(2)}`,
+    `\xA7r------
+
+
+`
   ];
   return txt.join("\n");
 }
 
 // development_behavior_packs/cmdcorp_Air/src/main.js
+var isFlightStick = (itemStack) => itemStack?.typeId === MinecraftItemTypes.Stick && itemStack?.nameTag === STICK_NAME;
 var elytra = () => {
   const etr = new mc2.ItemStack(MinecraftItemTypes.Elytra, 1);
   const etrComp = etr.getComponent(mc2.ItemComponentTypes.Durability);
@@ -4001,12 +4004,11 @@ var elytra = () => {
   etrComp.unbreakable = true;
   return etr;
 };
-var firework = () => new mc2.ItemStack(MinecraftItemTypes.FireworkStar, 64);
+var firework = () => new mc2.ItemStack(MinecraftItemTypes.FireworkRocket, 64);
 var stick = () => {
   const stk = new mc2.ItemStack(MinecraftItemTypes.Stick, 1);
   stk.nameTag = STICK_NAME;
   stk.lockMode = mc2.ItemLockMode.slot;
-  stk.setDynamicProperty(STICK_PROP, true);
   return stk;
 };
 (() => {
@@ -4018,8 +4020,13 @@ var stick = () => {
       if (!inventoryComp?.isValid) return;
       const containerComp = inventoryComp.container;
       if (!containerComp?.isValid) return;
-      const firstHotbar = containerComp.getItem(0);
-      if (!firstHotbar?.getDynamicProperty(STICK_PROP)) containerComp.setItem(0, stick());
+      let emptySlot;
+      for (let i = 0; i < containerComp.size; i++) {
+        const item = containerComp.getItem(i);
+        if (isFlightStick(item)) return;
+        if (item === void 0 && emptySlot === void 0) emptySlot = i;
+      }
+      if (emptySlot !== void 0) containerComp.setItem(emptySlot, stick());
     });
     mc2.system.run(setStick);
   }
@@ -4027,7 +4034,7 @@ var stick = () => {
 })();
 mc2.world.afterEvents.itemUse.subscribe((eventData) => {
   const { source, itemStack } = eventData;
-  if (!itemStack.getDynamicProperty(STICK_PROP)) return;
+  if (!isFlightStick(itemStack)) return;
   const consoleData = getFlightConsole(source);
   if (consoleData === void 0) {
     writeFlightConsole(source, defaultFlightConsole());
@@ -4084,6 +4091,7 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
           return;
         }
         consoleData.ap.status = !consoleData.ap.status;
+        consoleData.choice = void 0;
         writeFlightConsole(p, consoleData);
         return;
       } else if (choice.id === 2) {
@@ -4140,14 +4148,14 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
             writeFlightConsole(p, consoleData);
             return;
           }
-        } else if (ap.disableReason === AP_DISABLE_ALT_LOW) {
-          if (calcAlt(p) >= AP_ALT_REQUIREMENT) {
+        } else if (ap.disableReason === AP_DISABLE_NOT_GLIDING) {
+          if (p.isGliding) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
             return;
           }
-        } else if (ap.disableReason === AP_DISABLE_NOT_GLIDING) {
-          if (p.isGliding) {
+        } else if (ap.disableReason === AP_DISABLE_ALT_LOW) {
+          if (calcAlt(p) >= AP_ALT_REQUIREMENT) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
             return;
@@ -4166,13 +4174,13 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
         writeFlightConsole(p, consoleData);
         return;
       }
-      if (calcAlt(p) < AP_ALT_REQUIREMENT) {
-        ap.disableReason = AP_DISABLE_ALT_LOW;
+      if (!p.isGliding) {
+        ap.disableReason = AP_DISABLE_NOT_GLIDING;
         writeFlightConsole(p, consoleData);
         return;
       }
-      if (!p.isGliding) {
-        ap.disableReason = AP_DISABLE_NOT_GLIDING;
+      if (calcAlt(p) < AP_ALT_REQUIREMENT) {
+        ap.disableReason = AP_DISABLE_ALT_LOW;
         writeFlightConsole(p, consoleData);
         return;
       }
@@ -4194,6 +4202,7 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
       if (!consoleData) return;
       const ap = consoleData.ap;
       if (ap.disableReason && ap.status) ap.status = false;
+      writeFlightConsole(p, consoleData);
     });
     mc2.system.run(apWatchDog);
   }
@@ -4256,6 +4265,7 @@ mc2.system.beforeEvents.startup.subscribe((eventData) => {
           x: args[0],
           z: args[1]
         };
+        writeFlightConsole(sourceEntity, consoleData);
         return {
           message: "Waypoint was set",
           status: mc2.CustomCommandStatus.Success

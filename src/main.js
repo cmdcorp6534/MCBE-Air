@@ -8,6 +8,15 @@ import * as utils from './utils';
 import * as config from './config';
 import * as texts from './texts';
 
+// ItemStack 动态属性不支持可堆叠物品，面板木棍改用 typeId + nameTag 识别。
+/**
+ * @param { mc.ItemStack | undefined } itemStack
+ * @returns { boolean }
+ */
+const isFlightStick = (itemStack) =>
+    itemStack?.typeId === vanilla.MinecraftItemTypes.Stick &&
+    itemStack?.nameTag === texts.STICK_NAME;
+
 // const elytra = () => new mc.ItemStack(vanilla.MinecraftItemTypes.Elytra, 1);
 const elytra = () => {
     const etr = new mc.ItemStack(vanilla.MinecraftItemTypes.Elytra, 1);
@@ -16,12 +25,11 @@ const elytra = () => {
     etrComp.unbreakable = true;
     return etr;
 }
-const firework = () => new mc.ItemStack(vanilla.MinecraftItemTypes.FireworkStar, 64);
+const firework = () => new mc.ItemStack(vanilla.MinecraftItemTypes.FireworkRocket, 64);
 const stick = () => {
     const stk = new mc.ItemStack(vanilla.MinecraftItemTypes.Stick, 1);
     stk.nameTag = texts.STICK_NAME;
     stk.lockMode = mc.ItemLockMode.slot;
-    stk.setDynamicProperty(config.STICK_PROP, true);
     return stk;
 }
 
@@ -34,8 +42,15 @@ const stick = () => {
             if (!inventoryComp?.isValid) return;
             const containerComp = inventoryComp.container;
             if (!containerComp?.isValid) return;
-            const firstHotbar = containerComp.getItem(0);
-            if (!firstHotbar?.getDynamicProperty(config.STICK_PROP)) containerComp.setItem(0, stick());
+            // 优先使用已有的面板木棍；没有则放入第一个空槽，避免覆盖 0 号槽原有物品。
+            /** @type { number | undefined } */
+            let emptySlot;
+            for (let i = 0; i < containerComp.size; i++) {
+                const item = containerComp.getItem(i);
+                if (isFlightStick(item)) return;
+                if (item === undefined && emptySlot === undefined) emptySlot = i;
+            }
+            if (emptySlot !== undefined) containerComp.setItem(emptySlot, stick());
         });
         mc.system.run(setStick);
     }
@@ -44,7 +59,7 @@ const stick = () => {
 
 mc.world.afterEvents.itemUse.subscribe(eventData => {
     const { source, itemStack } = eventData;
-    if (!itemStack.getDynamicProperty(config.STICK_PROP)) return;
+    if (!isFlightStick(itemStack)) return;
     const consoleData = utils.getFlightConsole(source);
     if (consoleData === undefined) {
         utils.writeFlightConsole(source, utils.defaultFlightConsole());
@@ -106,6 +121,7 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                     return;
                 }
                 consoleData.ap.status = !consoleData.ap.status;
+                consoleData.choice = undefined;
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
@@ -169,15 +185,15 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                         return;
                     }
                 }
-                else if (ap.disableReason === texts.AP_DISABLE_ALT_LOW) {
-                    if (utils.calcAlt(p) >= config.AP_ALT_REQUIREMENT) {
+                else if (ap.disableReason === texts.AP_DISABLE_NOT_GLIDING) {
+                    if (p.isGliding) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
                         return;
                     }
                 }
-                else if (ap.disableReason === texts.AP_DISABLE_NOT_GLIDING) {
-                    if (p.isGliding) {
+                else if (ap.disableReason === texts.AP_DISABLE_ALT_LOW) {
+                    if (utils.calcAlt(p) >= config.AP_ALT_REQUIREMENT) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
                         return;
@@ -197,13 +213,13 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
-            if (utils.calcAlt(p) < config.AP_ALT_REQUIREMENT) {
-                ap.disableReason = texts.AP_DISABLE_ALT_LOW;
+            if (!p.isGliding) {
+                ap.disableReason = texts.AP_DISABLE_NOT_GLIDING;
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
-            if (!p.isGliding) {
-                ap.disableReason = texts.AP_DISABLE_NOT_GLIDING;
+            if (utils.calcAlt(p) < config.AP_ALT_REQUIREMENT) {
+                ap.disableReason = texts.AP_DISABLE_ALT_LOW;
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
@@ -226,6 +242,7 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
             if (!consoleData) return;
             const ap = consoleData.ap;
             if (ap.disableReason && ap.status) ap.status = false;
+            utils.writeFlightConsole(p, consoleData);
         });
         mc.system.run(apWatchDog);
     }
@@ -291,6 +308,7 @@ mc.system.beforeEvents.startup.subscribe(eventData => {
                     x: args[0],
                     z: args[1]
                 }
+                utils.writeFlightConsole(sourceEntity, consoleData);
                 return {
                     message: 'Waypoint was set',
                     status: mc.CustomCommandStatus.Success
