@@ -50,9 +50,7 @@ const stick = () => {
                 if (isFlightStick(item)) return;
                 if (item === undefined && emptySlot === undefined) emptySlot = i;
             }
-            if (emptySlot !== undefined) {
-                p.runCommand(`give @s firework_rocket 64 ${config.FW_DATA_NUM}`);
-            }
+            if (emptySlot !== undefined) containerComp.setItem(emptySlot, stick());
         });
         mc.system.run(setStick);
     }
