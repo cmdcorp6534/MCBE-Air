@@ -4221,12 +4221,17 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
         x: p.location.x,
         z: p.location.z
       };
-      const yaw = calcYaw(currentLoc, ap.waypoint);
-      if (yaw === null) return;
-      p.setRotation({
-        x: p.getRotation().x,
-        y: yaw
-      });
+      const targetYaw = calcYaw(currentLoc, ap.waypoint);
+      if (targetYaw === null) return;
+      const currentYaw = p.getRotation().y;
+      if (Math.abs(currentYaw - targetYaw) > 10) {
+        p.teleport(p.location, {
+          rotation: {
+            x: p.getRotation().x,
+            y: targetYaw
+          }
+        });
+      }
     });
     mc2.system.run(apNav);
   }
