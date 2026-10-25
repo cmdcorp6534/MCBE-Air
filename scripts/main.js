@@ -3909,6 +3909,7 @@ var AP_SYSTEM = "AUTO_PILOT_DATA";
 var CHOICE_REMAIN_TICKS = 60;
 var AP_ALT_REQUIREMENT = 30;
 var AP_DISTANCE_REQUIREMENT = 50;
+var FW_DATA_NUM = 3;
 
 // development_behavior_packs/cmdcorp_Air/src/texts.js
 var STICK_NAME = "\u98DE\u884C\u9762\u677F";
@@ -4005,12 +4006,6 @@ var elytra = () => {
   return etr;
 };
 var firework = () => new mc2.ItemStack(MinecraftItemTypes.FireworkRocket, 64);
-var stick = () => {
-  const stk = new mc2.ItemStack(MinecraftItemTypes.Stick, 1);
-  stk.nameTag = STICK_NAME;
-  stk.lockMode = mc2.ItemLockMode.slot;
-  return stk;
-};
 (() => {
   function setStick() {
     const players = mc2.world.getAllPlayers();
@@ -4026,7 +4021,9 @@ var stick = () => {
         if (isFlightStick(item)) return;
         if (item === void 0 && emptySlot === void 0) emptySlot = i;
       }
-      if (emptySlot !== void 0) containerComp.setItem(emptySlot, stick());
+      if (emptySlot !== void 0) {
+        p.runCommand(`give @s firework_rocket 64 ${FW_DATA_NUM}`);
+      }
     });
     mc2.system.run(setStick);
   }
