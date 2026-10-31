@@ -2,7 +2,7 @@
 
 一个面向 Minecraft 基岩版的鞘翅飞行辅助 Addon。进入世界后会在快捷栏提供“飞行面板”，可以快速获得鞘翅/烟花、设置航点并开启自动驾驶。
 
-[![Package mcaddon](https://github.com/cmdcorp6534/MCBE-Air/actions/workflows/package.yml/badge.svg)](https://github.com/cmdcorp6534/MCBE-Air/actions/workflows/package.yml)
+[![Package mcpack](https://github.com/cmdcorp6534/MCBE-Air/actions/workflows/package.yml/badge.svg)](https://github.com/cmdcorp6534/MCBE-Air/actions/workflows/package.yml)
 
 > 仅支持 Minecraft 基岩版（Behavior Pack），不适用于 Java 版。
 
@@ -21,7 +21,7 @@
 
 ## 安装
 
-1. 从 [Releases](https://github.com/cmdcorp6534/MCBE-Air/releases) 下载最新的 `.mcaddon`。
+1. 从 [Releases](https://github.com/cmdcorp6534/MCBE-Air/releases) 下载最新的 `.mcpack`。
 2. 双击文件，或用 Minecraft 打开，等待行为包导入。
 3. 进入世界设置 → **行为包**，激活“天空即为极限”。
 4. 进入世界即可使用。
@@ -135,7 +135,7 @@ ActionBar 会显示：
 GitHub Actions 的打包流程见 [`.github/workflows/package.yml`](.github/workflows/package.yml)：
 
 - push 到 `main`：生成 Actions artifact；
-- push `v*` tag：生成 `.mcaddon` 并上传到对应的 GitHub Release；
+- push `v*` tag：生成 `.mcpack` 并上传到对应的 GitHub Release；
 - Workflow 不执行 esbuild，直接使用已提交的 `scripts/build.js`；
 - 打包内容为工作区全部文件（排除 `.git/` 和 `.github/`），zip 根目录直接是 `manifest.json`、`scripts/`、`src/` 等。
 

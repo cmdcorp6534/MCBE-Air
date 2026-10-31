@@ -1,4 +1,4 @@
-name: Package mcaddon
+name: Package mcpack
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   package:
-    name: Build mcaddon
+    name: Build mcpack
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -70,14 +70,14 @@ jobs:
           test -f "$RUNNER_TEMP/package/pack/manifest.json"
           test -f "$RUNNER_TEMP/package/pack/${{ steps.meta.outputs.entry }}"
 
-      - name: Create mcaddon
+      - name: Create mcpack
         id: package
         shell: bash
         run: |
           set -euo pipefail
-          OUT="cmdcorp_Air-${{ steps.meta.outputs.release_version }}.mcaddon"
+          OUT="cmdcorp_Air-${{ steps.meta.outputs.release_version }}.mcpack"
 
-          # A mcaddon is a regular zip. Its root is the behavior pack itself,
+          # An mcpack is a regular zip whose root is the behavior pack itself,
           # so manifest.json and scripts/ sit directly at the top level.
           (cd "$RUNNER_TEMP/package/pack" && zip -r -9 -X "../$OUT" .)
 
@@ -88,10 +88,10 @@ jobs:
 
           echo "file=$RUNNER_TEMP/package/$OUT" >> "$GITHUB_OUTPUT"
 
-      - name: Upload mcaddon
+      - name: Upload mcpack
         uses: actions/upload-artifact@v4
         with:
-          name: mcaddon-${{ steps.meta.outputs.release_version }}
+          name: mcpack-${{ steps.meta.outputs.release_version }}
           path: ${{ steps.package.outputs.file }}
           if-no-files-found: error
           retention-days: 30
