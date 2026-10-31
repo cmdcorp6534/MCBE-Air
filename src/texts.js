@@ -11,6 +11,7 @@ export const AP = '自动驾驶';
 export const ELY = '获得鞘翅';
 export const FWR = '获得烟花火箭';
 export const EXIT = '关闭并重置';
+export const AP_DISABLE_DAMAGE = '鞘翅损坏';
 export const AP_DISABLE_WP_UD = '未定义航点';
 export const AP_DISABLE_ALT_LOW = '高度过低';
 export const AP_DISABLE_SINK_RATE = '下降率过大';

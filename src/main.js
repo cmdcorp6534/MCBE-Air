@@ -168,7 +168,14 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                 z: p.location.z
             };
             if (ap.disableReason) {
-                if (ap.disableReason === texts.AP_DISABLE_WP_UD) {
+                if (ap.disableReason === texts.AP_DISABLE_DAMAGE) {
+                    if (!isNaN(utils.getDurabilityPercent(p)) && (utils.getDurabilityPercent(p) < config.AP_ETR_DAMAGE_MAX)) {
+                        ap.disableReason = undefined;
+                        utils.writeFlightConsole(p, consoleData);
+                        // return;
+                    }
+                }
+                else if (ap.disableReason === texts.AP_DISABLE_WP_UD) {
                     if (ap.waypoint) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
@@ -177,6 +184,13 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                 }
                 else if (ap.disableReason === texts.AP_DISABLE_NOT_GLIDING) {
                     if (p.isGliding) {
+                        ap.disableReason = undefined;
+                        utils.writeFlightConsole(p, consoleData);
+                        // return;
+                    }
+                }
+                else if (ap.disableReason === texts.AP_DISABLE_SINK_RATE) {
+                    if (p.getVelocity().y >= -config.AP_SINK_RATE_MAX) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
                         // return;
@@ -198,6 +212,11 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                     }
                 }
             }
+            if (isNaN(utils.getDurabilityPercent(p)) || (utils.getDurabilityPercent(p) >= config.AP_ETR_DAMAGE_MAX)) {
+                ap.disableReason = texts.AP_DISABLE_DAMAGE;
+                utils.writeFlightConsole(p, consoleData);
+                return;
+            }
             if (!ap.waypoint) {
                 ap.disableReason = texts.AP_DISABLE_WP_UD;
                 utils.writeFlightConsole(p, consoleData);
@@ -208,7 +227,7 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
-            if (p.getVelocity().y < -config.AP_ALT_REQUIREMENT) {
+            if (p.getVelocity().y < -config.AP_SINK_RATE_MAX) {
                 ap.disableReason = texts.AP_DISABLE_SINK_RATE;
                 utils.writeFlightConsole(p, consoleData);
                 return;
@@ -283,11 +302,11 @@ mc.system.beforeEvents.startup.subscribe(eventData => {
             mandatoryParameters: [
                 {
                     name: 'WaypointX',
-                    type: mc.CustomCommandParamType.Integer
+                    type: mc.CustomCommandParamType.Float
                 },
                 {
                     name: 'WaypointZ',
-                    type: mc.CustomCommandParamType.Integer
+                    type: mc.CustomCommandParamType.Float
                 }
             ],
             name: 'cmdcorp_air:wpt',

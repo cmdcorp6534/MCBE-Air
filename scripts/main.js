@@ -3909,6 +3909,8 @@ var ETR_UNBREAKABLE = false;
 var AP_SYSTEM = "AUTO_PILOT_DATA";
 var CHOICE_REMAIN_TICKS = 60;
 var AP_ALT_REQUIREMENT = 30;
+var AP_SINK_RATE_MAX = 0.8;
+var AP_ETR_DAMAGE_MAX = 80;
 var AP_DISTANCE_REQUIREMENT = 50;
 var FW_DATA = 3;
 
@@ -3923,6 +3925,7 @@ var AP = "\u81EA\u52A8\u9A7E\u9A76";
 var ELY = "\u83B7\u5F97\u9798\u7FC5";
 var FWR = "\u83B7\u5F97\u70DF\u82B1\u706B\u7BAD";
 var EXIT = "\u5173\u95ED\u5E76\u91CD\u7F6E";
+var AP_DISABLE_DAMAGE = "\u9798\u7FC5\u635F\u574F";
 var AP_DISABLE_WP_UD = "\u672A\u5B9A\u4E49\u822A\u70B9";
 var AP_DISABLE_ALT_LOW = "\u9AD8\u5EA6\u8FC7\u4F4E";
 var AP_DISABLE_SINK_RATE = "\u4E0B\u964D\u7387\u8FC7\u5927";
@@ -3970,6 +3973,16 @@ function calcAlt(pl) {
   if (blockLocation === void 0) return playerLocation.y - pl.dimension.heightRange.min;
   return playerLocation.y - blockLocation.y;
 }
+function getDurabilityPercent(pl) {
+  if (!pl.isValid) return NaN;
+  const equippableComp = pl.getComponent(mc.EntityComponentTypes.Equippable);
+  if (!equippableComp?.isValid) return NaN;
+  const chest = equippableComp.getEquipment(mc.EquipmentSlot.Chest);
+  if (chest?.typeId !== MinecraftItemTypes.Elytra) return NaN;
+  const etrDurability = chest.getComponent(mc.ItemComponentTypes.Durability);
+  if (etrDurability === void 0) return NaN;
+  return etrDurability.damage / etrDurability.maxDurability * 100;
+}
 function getConsoleText(data, pl) {
   const velocity = pl.getVelocity();
   const groundVelocity = { x: velocity.x, z: velocity.z };
@@ -3978,9 +3991,9 @@ function getConsoleText(data, pl) {
   const txt = [
     "\xA7r------",
     `\xA7r\xA7l${CHOICE_TITLE}`,
-    `\xA7r${data.choice?.id === 1 ? "*" : " "} ${AP}  \xA7r${data.choice?.id === 2 ? "*" : " "} ${ELY}`,
+    `\xA7r${data.choice?.id === 1 ? ">" : ""}${AP}  \xA7r${data.choice?.id === 2 ? ">" : ""}${ELY}`,
     // `§r${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
-    `\xA7r${data.choice?.id === 3 ? "*" : " "} ${FWR}  \xA7r${data.choice?.id === 4 ? "*" : " "} ${EXIT}`,
+    `\xA7r${data.choice?.id === 3 ? ">" : ""}${FWR}  \xA7r${data.choice?.id === 4 ? ">" : ""}${EXIT}`,
     // `§r${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
     `\xA7r\xA7a${data.choice !== void 0 ? data.choice.remains : "N/A"}`,
     "\xA7r------",
@@ -3988,9 +4001,12 @@ function getConsoleText(data, pl) {
     data.ap.waypoint !== void 0 ? `\xA7r\xA7c${data.ap.waypoint.x.toFixed(2)} \xA79${data.ap.waypoint.z.toFixed(2)}` : `\xA7r\xA7e${AP_WP_UD}`,
     data.ap.status ? `\xA7r\xA7a${AP_ON}` : data.ap.disableReason === void 0 ? `\xA7r\xA7e${AP_OFF}` : `\xA7r\xA7c${data.ap.disableReason}`,
     "\xA7r------",
-    `\xA7r\xA7lSpeed \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGroundSpeed \xA7r\xA7a${groundSpeed.toFixed(2)}  \xA7r\xA7lVerticalVelocity \xA7r\xA7a${velocity.y.toFixed(2)}`,
-    `\xA7r\xA7lAltitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7lPitch \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lYaw \xA7r\xA7a${pl.getRotation().y.toFixed(2)}`,
+    `\xA7r\xA7lSpeed \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGroundSpeed \xA7r\xA7a${groundSpeed.toFixed(2)}  \xA7r\xA7l${velocity.y < -AP_SINK_RATE_MAX ? "\xA7c" : ""}VerticalVelocity \xA7r\xA7a${velocity.y.toFixed(2)}`,
+    `\xA7r\xA7lAltitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7lPitch \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lYaw \xA7r\xA7a${pl.getRotation().y.toFixed(2)}  \xA7r\xA7l${isNaN(getDurabilityPercent(pl)) || getDurabilityPercent(pl) >= AP_ETR_DAMAGE_MAX ? "\xA7c" : ""}ElytraDamage \xA7r\xA7a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? "" : "%"}`,
     `\xA7r------
+
+
+
 
 
 `
@@ -4140,13 +4156,23 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
         z: p.location.z
       };
       if (ap.disableReason) {
-        if (ap.disableReason === AP_DISABLE_WP_UD) {
+        if (ap.disableReason === AP_DISABLE_DAMAGE) {
+          if (!isNaN(getDurabilityPercent(p)) && getDurabilityPercent(p) < AP_ETR_DAMAGE_MAX) {
+            ap.disableReason = void 0;
+            writeFlightConsole(p, consoleData);
+          }
+        } else if (ap.disableReason === AP_DISABLE_WP_UD) {
           if (ap.waypoint) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
           }
         } else if (ap.disableReason === AP_DISABLE_NOT_GLIDING) {
           if (p.isGliding) {
+            ap.disableReason = void 0;
+            writeFlightConsole(p, consoleData);
+          }
+        } else if (ap.disableReason === AP_DISABLE_SINK_RATE) {
+          if (p.getVelocity().y >= -AP_SINK_RATE_MAX) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
           }
@@ -4163,6 +4189,11 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
           }
         }
       }
+      if (isNaN(getDurabilityPercent(p)) || getDurabilityPercent(p) >= AP_ETR_DAMAGE_MAX) {
+        ap.disableReason = AP_DISABLE_DAMAGE;
+        writeFlightConsole(p, consoleData);
+        return;
+      }
       if (!ap.waypoint) {
         ap.disableReason = AP_DISABLE_WP_UD;
         writeFlightConsole(p, consoleData);
@@ -4173,7 +4204,7 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
         writeFlightConsole(p, consoleData);
         return;
       }
-      if (p.getVelocity().y < -AP_ALT_REQUIREMENT) {
+      if (p.getVelocity().y < -AP_SINK_RATE_MAX) {
         ap.disableReason = AP_DISABLE_SINK_RATE;
         writeFlightConsole(p, consoleData);
         return;
@@ -4244,11 +4275,11 @@ mc2.system.beforeEvents.startup.subscribe((eventData) => {
       mandatoryParameters: [
         {
           name: "WaypointX",
-          type: mc2.CustomCommandParamType.Integer
+          type: mc2.CustomCommandParamType.Float
         },
         {
           name: "WaypointZ",
-          type: mc2.CustomCommandParamType.Integer
+          type: mc2.CustomCommandParamType.Float
         }
       ],
       name: "cmdcorp_air:wpt",

@@ -2,6 +2,7 @@
 'use strict';
 
 import * as mc from '@minecraft/server';
+import * as vanilla from '@minecraft/vanilla-data';
 import * as mcmath from '@minecraft/math';
 import * as config from './config';
 import * as texts from './texts';
@@ -79,6 +80,21 @@ export function calcAlt(pl) {
     return playerLocation.y - blockLocation.y;
 }
 
+/**
+ * @param { mc.Player } pl
+ * @returns { number }
+ */
+export function getDurabilityPercent(pl) {
+    if (!pl.isValid) return NaN;
+    const equippableComp = pl.getComponent(mc.EntityComponentTypes.Equippable);
+    if (!equippableComp?.isValid) return NaN;
+    const chest = equippableComp.getEquipment(mc.EquipmentSlot.Chest);
+    if (chest?.typeId !== vanilla.MinecraftItemTypes.Elytra) return NaN;
+    const etrDurability = chest.getComponent(mc.ItemComponentTypes.Durability);
+    if (etrDurability === undefined) return NaN;
+    return etrDurability.damage / etrDurability.maxDurability * 100;
+}
+
 
 /**
  * @param { FlightConsole } data
@@ -94,9 +110,9 @@ export function getConsoleText(data, pl) {
     const txt = [
         '§r------',
         `§r§l${texts.CHOICE_TITLE}`,
-        `§r${(data.choice?.id === 1) ? '*' : ' '} ${texts.AP}  §r${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
+        `§r${(data.choice?.id === 1) ? '>' : ''}${texts.AP}  §r${(data.choice?.id === 2) ? '>' : ''}${texts.ELY}`,
         // `§r${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
-        `§r${(data.choice?.id === 3) ? '*' : ' '} ${texts.FWR}  §r${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
+        `§r${(data.choice?.id === 3) ? '>' : ''}${texts.FWR}  §r${(data.choice?.id === 4) ? '>' : ''}${texts.EXIT}`,
         // `§r${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
         `§r§a${(data.choice !== undefined) ? data.choice.remains : 'N/A'}`,
         '§r------',
@@ -111,9 +127,9 @@ export function getConsoleText(data, pl) {
             : `§r§c${data.ap.disableReason}`
         ),
         '§r------',
-        `§r§lSpeed §r§a${speed.toFixed(2)}  §r§lGroundSpeed §r§a${groundSpeed.toFixed(2)}  §r§lVerticalVelocity §r§a${velocity.y.toFixed(2)}`,
-        `§r§lAltitude §r§a${calcAlt(pl).toFixed(2)}  §r§lPitch §r§a${pl.getRotation().x.toFixed(2)}  §r§lYaw §r§a${pl.getRotation().y.toFixed(2)}`,
-        `§r------\n\n\n`
+        `§r§lSpeed §r§a${speed.toFixed(2)}  §r§lGroundSpeed §r§a${groundSpeed.toFixed(2)}  §r§l${velocity.y < -config.AP_SINK_RATE_MAX ? '§c' : ''}VerticalVelocity §r§a${velocity.y.toFixed(2)}`,
+        `§r§lAltitude §r§a${calcAlt(pl).toFixed(2)}  §r§lPitch §r§a${pl.getRotation().x.toFixed(2)}  §r§lYaw §r§a${pl.getRotation().y.toFixed(2)}  §r§l${isNaN(getDurabilityPercent(pl)) || (getDurabilityPercent(pl) >= config.AP_ETR_DAMAGE_MAX) ? '§c' : ''}ElytraDamage §r§a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? '' : '%'}`,
+        `§r------\n\n\n\n\n\n`
     ];
     return txt.join('\n');
 }
