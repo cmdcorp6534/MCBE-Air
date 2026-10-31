@@ -3905,6 +3905,7 @@ var Colors = {
 import { BlockVolume } from "@minecraft/server";
 
 // development_behavior_packs/cmdcorp_Air/src/config.js
+var ETR_UNBREAKABLE = false;
 var AP_SYSTEM = "AUTO_PILOT_DATA";
 var CHOICE_REMAIN_TICKS = 60;
 var AP_ALT_REQUIREMENT = 30;
@@ -3924,6 +3925,7 @@ var FWR = "\u83B7\u5F97\u70DF\u82B1\u706B\u7BAD";
 var EXIT = "\u5173\u95ED\u5E76\u91CD\u7F6E";
 var AP_DISABLE_WP_UD = "\u672A\u5B9A\u4E49\u822A\u70B9";
 var AP_DISABLE_ALT_LOW = "\u9AD8\u5EA6\u8FC7\u4F4E";
+var AP_DISABLE_SINK_RATE = "\u4E0B\u964D\u7387\u8FC7\u5927";
 var AP_DISABLE_NOT_GLIDING = "\u672A\u5904\u4E8E\u6ED1\u884C\u72B6\u6001";
 var AP_DISABLE_APPROACH = "\u5DF2\u5728\u822A\u70B9\u9644\u8FD1";
 var WP_CMD_DESCRIPTION = "\u8BBE\u7F6E\u822A\u70B9";
@@ -3965,7 +3967,7 @@ function getFlightConsole(pl) {
 function calcAlt(pl) {
   const playerLocation = pl.location;
   const blockLocation = pl.dimension.getBlockBelow(playerLocation)?.location;
-  if (blockLocation === void 0) return Infinity;
+  if (blockLocation === void 0) return playerLocation.y - pl.dimension.heightRange.min;
   return playerLocation.y - blockLocation.y;
 }
 function getConsoleText(data, pl) {
@@ -3976,10 +3978,10 @@ function getConsoleText(data, pl) {
   const txt = [
     "\xA7r------",
     `\xA7r\xA7l${CHOICE_TITLE}`,
-    `\xA7r${data.choice?.id === 1 ? "*" : " "} ${AP}`,
-    `\xA7r${data.choice?.id === 2 ? "*" : " "} ${ELY}`,
-    `\xA7r${data.choice?.id === 3 ? "*" : " "} ${FWR}`,
-    `\xA7r${data.choice?.id === 4 ? "*" : " "} ${EXIT}`,
+    `\xA7r${data.choice?.id === 1 ? "*" : " "} ${AP}  \xA7r${data.choice?.id === 2 ? "*" : " "} ${ELY}`,
+    // `§r${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
+    `\xA7r${data.choice?.id === 3 ? "*" : " "} ${FWR}  \xA7r${data.choice?.id === 4 ? "*" : " "} ${EXIT}`,
+    // `§r${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
     `\xA7r\xA7a${data.choice !== void 0 ? data.choice.remains : "N/A"}`,
     "\xA7r------",
     `\xA7r\xA7l${AP_TITLE}`,
@@ -3987,7 +3989,7 @@ function getConsoleText(data, pl) {
     data.ap.status ? `\xA7r\xA7a${AP_ON}` : data.ap.disableReason === void 0 ? `\xA7r\xA7e${AP_OFF}` : `\xA7r\xA7c${data.ap.disableReason}`,
     "\xA7r------",
     `\xA7r\xA7lSpeed \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGroundSpeed \xA7r\xA7a${groundSpeed.toFixed(2)}  \xA7r\xA7lVerticalVelocity \xA7r\xA7a${velocity.y.toFixed(2)}`,
-    `\xA7r\xA7lAltitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7lRotationX \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lRotationY \xA7r\xA7a${pl.getRotation().y.toFixed(2)}`,
+    `\xA7r\xA7lAltitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7lPitch \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lYaw \xA7r\xA7a${pl.getRotation().y.toFixed(2)}`,
     `\xA7r------
 
 
@@ -4000,6 +4002,7 @@ function getConsoleText(data, pl) {
 var isFlightStick = (itemStack) => itemStack?.typeId === MinecraftItemTypes.Stick && itemStack?.nameTag === STICK_NAME;
 var elytra = () => {
   const etr = new mc2.ItemStack(MinecraftItemTypes.Elytra, 1);
+  if (!ETR_UNBREAKABLE) return etr;
   const etrComp = etr.getComponent(mc2.ItemComponentTypes.Durability);
   if (!etrComp?.isValid) return etr;
   etrComp.unbreakable = true;
@@ -4141,26 +4144,22 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
           if (ap.waypoint) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
-            return;
           }
         } else if (ap.disableReason === AP_DISABLE_NOT_GLIDING) {
           if (p.isGliding) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
-            return;
           }
         } else if (ap.disableReason === AP_DISABLE_ALT_LOW) {
           if (calcAlt(p) >= AP_ALT_REQUIREMENT) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
-            return;
           }
         } else if (ap.disableReason === AP_DISABLE_APPROACH) {
           if (!ap.waypoint) return;
           if (calcYaw(currentLoc, ap.waypoint) !== null) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
-            return;
           }
         }
       }
@@ -4171,6 +4170,11 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
       }
       if (!p.isGliding) {
         ap.disableReason = AP_DISABLE_NOT_GLIDING;
+        writeFlightConsole(p, consoleData);
+        return;
+      }
+      if (p.getVelocity().y < -AP_ALT_REQUIREMENT) {
+        ap.disableReason = AP_DISABLE_SINK_RATE;
         writeFlightConsole(p, consoleData);
         return;
       }

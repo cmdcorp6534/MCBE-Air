@@ -75,7 +75,7 @@ export function getFlightConsole(pl) {
 export function calcAlt(pl) {
     const playerLocation = pl.location;
     const blockLocation = pl.dimension.getBlockBelow(playerLocation)?.location;
-    if (blockLocation === undefined) return Infinity;
+    if (blockLocation === undefined) return playerLocation.y - pl.dimension.heightRange.min;
     return playerLocation.y - blockLocation.y;
 }
 
@@ -94,10 +94,10 @@ export function getConsoleText(data, pl) {
     const txt = [
         '§r------',
         `§r§l${texts.CHOICE_TITLE}`,
-        `§r${(data.choice?.id === 1) ? '*' : ' '} ${texts.AP}`,
-        `§r${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
-        `§r${(data.choice?.id === 3) ? '*' : ' '} ${texts.FWR}`,
-        `§r${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
+        `§r${(data.choice?.id === 1) ? '*' : ' '} ${texts.AP}  §r${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
+        // `§r${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
+        `§r${(data.choice?.id === 3) ? '*' : ' '} ${texts.FWR}  §r${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
+        // `§r${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
         `§r§a${(data.choice !== undefined) ? data.choice.remains : 'N/A'}`,
         '§r------',
         `§r§l${texts.AP_TITLE}`,
@@ -112,7 +112,7 @@ export function getConsoleText(data, pl) {
         ),
         '§r------',
         `§r§lSpeed §r§a${speed.toFixed(2)}  §r§lGroundSpeed §r§a${groundSpeed.toFixed(2)}  §r§lVerticalVelocity §r§a${velocity.y.toFixed(2)}`,
-        `§r§lAltitude §r§a${calcAlt(pl).toFixed(2)}  §r§lRotationX §r§a${pl.getRotation().x.toFixed(2)}  §r§lRotationY §r§a${pl.getRotation().y.toFixed(2)}`,
+        `§r§lAltitude §r§a${calcAlt(pl).toFixed(2)}  §r§lPitch §r§a${pl.getRotation().x.toFixed(2)}  §r§lYaw §r§a${pl.getRotation().y.toFixed(2)}`,
         `§r------\n\n\n`
     ];
     return txt.join('\n');

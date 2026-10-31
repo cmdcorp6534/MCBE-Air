@@ -17,6 +17,7 @@ const isFlightStick = (itemStack) =>
 
 const elytra = () => {
     const etr = new mc.ItemStack(vanilla.MinecraftItemTypes.Elytra, 1);
+    if (!config.ETR_UNBREAKABLE) return etr;
     const etrComp = etr.getComponent(mc.ItemComponentTypes.Durability);
     if (!etrComp?.isValid) return etr;
     etrComp.unbreakable = true;
@@ -171,21 +172,21 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                     if (ap.waypoint) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        return;
+                        // return;
                     }
                 }
                 else if (ap.disableReason === texts.AP_DISABLE_NOT_GLIDING) {
                     if (p.isGliding) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        return;
+                        // return;
                     }
                 }
                 else if (ap.disableReason === texts.AP_DISABLE_ALT_LOW) {
                     if (utils.calcAlt(p) >= config.AP_ALT_REQUIREMENT) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        return;
+                        // return;
                     }
                 }
                 else if (ap.disableReason === texts.AP_DISABLE_APPROACH) {
@@ -193,7 +194,7 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                     if (utils.calcYaw(currentLoc, ap.waypoint) !== null) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        return;
+                        // return;
                     }
                 }
             }
@@ -204,6 +205,11 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
             }
             if (!p.isGliding) {
                 ap.disableReason = texts.AP_DISABLE_NOT_GLIDING;
+                utils.writeFlightConsole(p, consoleData);
+                return;
+            }
+            if (p.getVelocity().y < -config.AP_ALT_REQUIREMENT) {
+                ap.disableReason = texts.AP_DISABLE_SINK_RATE;
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
