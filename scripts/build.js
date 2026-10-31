@@ -4001,7 +4001,7 @@ function getConsoleText(data, pl) {
     data.ap.status ? `\xA7r\xA7a${AP_ON}` : data.ap.disableReason === void 0 ? `\xA7r\xA7e${AP_OFF}` : `\xA7r\xA7c${data.ap.disableReason}`,
     "\xA7r------",
     `\xA7r\xA7lSpeed \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGroundSpeed \xA7r\xA7a${groundSpeed.toFixed(2)}  \xA7r\xA7l${velocity.y < -AP_SINK_RATE_MAX ? "\xA7c" : ""}VerticalVelocity \xA7r\xA7a${velocity.y.toFixed(2)}`,
-    `\xA7r\xA7lAltitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7lPitch \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lYaw \xA7r\xA7a${pl.getRotation().y.toFixed(2)}  \xA7r\xA7l${isNaN(getDurabilityPercent(pl)) || getDurabilityPercent(pl) >= AP_ETR_DAMAGE_MAX ? "\xA7c" : ""}ElytraDamage \xA7r\xA7a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? "" : "%"}`,
+    `\xA7r\xA7lAltitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7lDeclination \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lYaw \xA7r\xA7a${pl.getRotation().y.toFixed(2)}  \xA7r\xA7l${isNaN(getDurabilityPercent(pl)) || getDurabilityPercent(pl) >= AP_ETR_DAMAGE_MAX ? "\xA7c" : ""}ElytraDamage \xA7r\xA7a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? "" : "%"}`,
     `\xA7r------
 
 
