@@ -15,14 +15,6 @@ const isFlightStick = (itemStack) =>
     itemStack?.typeId === vanilla.MinecraftItemTypes.Stick &&
     itemStack?.nameTag === texts.STICK_NAME;
 
-const elytra = () => {
-    const etr = new mc.ItemStack(vanilla.MinecraftItemTypes.Elytra, 1);
-    if (!config.ETR_UNBREAKABLE) return etr;
-    const etrComp = etr.getComponent(mc.ItemComponentTypes.Durability);
-    if (!etrComp?.isValid) return etr;
-    etrComp.unbreakable = true;
-    return etr;
-}
 const stick = () => {
     const stk = new mc.ItemStack(vanilla.MinecraftItemTypes.Stick, 1);
     stk.nameTag = texts.STICK_NAME;
@@ -116,7 +108,7 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                 return;
             }
             else if (choice.id === 2) {
-                p.addItem(elytra());
+                p.runCommand('give @s elytra');
                 consoleData.choice = undefined;
                 utils.writeFlightConsole(p, consoleData);
                 return;
@@ -172,35 +164,30 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                     if (!isNaN(utils.getDurabilityPercent(p)) && (utils.getDurabilityPercent(p) < config.AP_ETR_DAMAGE_MAX)) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        // return;
                     }
                 }
                 else if (ap.disableReason === texts.AP_DISABLE_WP_UD) {
                     if (ap.waypoint) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        // return;
                     }
                 }
                 else if (ap.disableReason === texts.AP_DISABLE_NOT_GLIDING) {
                     if (p.isGliding) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        // return;
                     }
                 }
                 else if (ap.disableReason === texts.AP_DISABLE_SINK_RATE) {
                     if (p.getVelocity().y >= -config.AP_SINK_RATE_MAX) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        // return;
                     }
                 }
                 else if (ap.disableReason === texts.AP_DISABLE_ALT_LOW) {
                     if (utils.calcAlt(p) >= config.AP_ALT_REQUIREMENT) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        // return;
                     }
                 }
                 else if (ap.disableReason === texts.AP_DISABLE_APPROACH) {
@@ -208,7 +195,6 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                     if (utils.calcYaw(currentLoc, ap.waypoint) !== null) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
-                        // return;
                     }
                 }
             }

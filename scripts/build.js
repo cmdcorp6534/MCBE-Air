@@ -3905,7 +3905,6 @@ var Colors = {
 import { BlockVolume } from "@minecraft/server";
 
 // development_behavior_packs/cmdcorp_Air/src/config.js
-var ETR_UNBREAKABLE = false;
 var AP_SYSTEM = "AUTO_PILOT_DATA";
 var CHOICE_REMAIN_TICKS = 60;
 var AP_ALT_REQUIREMENT = 30;
@@ -4016,14 +4015,6 @@ function getConsoleText(data, pl) {
 
 // development_behavior_packs/cmdcorp_Air/src/main.js
 var isFlightStick = (itemStack) => itemStack?.typeId === MinecraftItemTypes.Stick && itemStack?.nameTag === STICK_NAME;
-var elytra = () => {
-  const etr = new mc2.ItemStack(MinecraftItemTypes.Elytra, 1);
-  if (!ETR_UNBREAKABLE) return etr;
-  const etrComp = etr.getComponent(mc2.ItemComponentTypes.Durability);
-  if (!etrComp?.isValid) return etr;
-  etrComp.unbreakable = true;
-  return etr;
-};
 var stick = () => {
   const stk = new mc2.ItemStack(MinecraftItemTypes.Stick, 1);
   stk.nameTag = STICK_NAME;
@@ -4109,7 +4100,7 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
         writeFlightConsole(p, consoleData);
         return;
       } else if (choice.id === 2) {
-        p.addItem(elytra());
+        p.runCommand("give @s elytra");
         consoleData.choice = void 0;
         writeFlightConsole(p, consoleData);
         return;
