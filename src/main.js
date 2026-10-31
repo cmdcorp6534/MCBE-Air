@@ -280,7 +280,8 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
             const targetYaw = utils.calcYaw(currentLoc, ap.waypoint);
             if (targetYaw === null) return;
             const currentYaw = p.getRotation().y;
-            if (Math.abs(currentYaw - targetYaw) > 10) {
+            const diff = ((currentYaw - targetYaw + 540) % 360) - 180;
+            if (Math.abs(diff) > 10) {
                 p.teleport(p.location, {
                     rotation: {
                         x: p.getRotation().x,
