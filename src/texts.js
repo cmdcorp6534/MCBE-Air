@@ -15,6 +15,6 @@ export const AP_DISABLE_DAMAGE = '鞘翅损坏';
 export const AP_DISABLE_WP_UD = '未定义航点';
 export const AP_DISABLE_ALT_LOW = '高度过低';
 export const AP_DISABLE_SINK_RATE = '下降率过大';
-export const AP_DISABLE_NOT_GLIDING = '未处于滑行状态';
+export const AP_DISABLE_NOT_GLIDING = '未处于滑翔状态';
 export const AP_DISABLE_APPROACH = '已在航点附近';
 export const WP_CMD_DESCRIPTION = '设置航点';
