@@ -3968,7 +3968,7 @@ function getFlightConsole(pl) {
 }
 function calcAlt(pl) {
   const playerLocation = pl.location;
-  const blockLocation = pl.dimension.getBlockBelow(playerLocation)?.location;
+  const blockLocation = pl.dimension.getBlockBelow(playerLocation, { includeLiquidBlocks: true })?.location;
   if (blockLocation === void 0) return playerLocation.y - pl.dimension.heightRange.min;
   return playerLocation.y - blockLocation.y;
 }

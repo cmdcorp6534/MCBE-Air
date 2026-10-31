@@ -75,7 +75,7 @@ export function getFlightConsole(pl) {
  */
 export function calcAlt(pl) {
     const playerLocation = pl.location;
-    const blockLocation = pl.dimension.getBlockBelow(playerLocation)?.location;
+    const blockLocation = pl.dimension.getBlockBelow(playerLocation, { includeLiquidBlocks: true })?.location;
     if (blockLocation === undefined) return playerLocation.y - pl.dimension.heightRange.min;
     return playerLocation.y - blockLocation.y;
 }
