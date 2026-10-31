@@ -17,7 +17,7 @@
             "type": "script",
             "uuid": "17a16c21-b068-4807-964b-5af401a21c4a",
             "version": [ 1, 0, 0 ],
-            "entry": "scripts/main.js",
+            "entry": "scripts/build.js",
             "language": "javascript"
         }
     ],
