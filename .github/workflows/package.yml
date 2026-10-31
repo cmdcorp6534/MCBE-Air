@@ -38,9 +38,18 @@ jobs:
 
           test -f "$ENTRY"
 
+          # Use the pushed tag as the release/file version. Fall back to the
+          # manifest version for branch and manual runs.
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            RELEASE_VERSION="${GITHUB_REF_NAME//\//-}"
+          else
+            RELEASE_VERSION="v$VERSION"
+          fi
+
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "entry=$ENTRY" >> "$GITHUB_OUTPUT"
-          echo "Pack: $PACK_NAME v$VERSION"
+          echo "Pack: $PACK_NAME $RELEASE_VERSION (manifest v$VERSION)"
           echo "Entry: $ENTRY"
 
       - name: Stage pack
@@ -66,7 +75,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          OUT="cmdcorp_Air-v${{ steps.meta.outputs.version }}.mcaddon"
+          OUT="cmdcorp_Air-${{ steps.meta.outputs.release_version }}.mcaddon"
 
           # A mcaddon is a regular zip. Its root is the behavior pack itself,
           # so manifest.json and scripts/ sit directly at the top level.
@@ -82,7 +91,7 @@ jobs:
       - name: Upload mcaddon
         uses: actions/upload-artifact@v4
         with:
-          name: mcaddon-${{ steps.meta.outputs.version }}
+          name: mcaddon-${{ steps.meta.outputs.release_version }}
           path: ${{ steps.package.outputs.file }}
           if-no-files-found: error
           retention-days: 30
