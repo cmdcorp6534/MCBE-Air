@@ -1,0 +1,97 @@
+name: Package mcaddon
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Build mcaddon
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read pack metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f manifest.json
+
+          VERSION=$(node -e "const v = require('./manifest.json').header.version; console.log(Array.isArray(v) ? v.join('.') : v)")
+          PACK_NAME=$(node -e "console.log(require('./manifest.json').header.name)")
+          ENTRY=$(node -e "const m = require('./manifest.json'); const s = (m.modules || []).find(x => x.type === 'script'); if (!s) throw new Error('No script module in manifest'); console.log(s.entry)")
+
+          test -f "$ENTRY"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "entry=$ENTRY" >> "$GITHUB_OUTPUT"
+          echo "Pack: $PACK_NAME v$VERSION"
+          echo "Entry: $ENTRY"
+
+      - name: Stage pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/package"
+          mkdir -p "$RUNNER_TEMP/package/pack"
+
+          # Package the whole workspace as-is, except VCS/CI metadata.
+          # The staging directory lives outside the workspace, so it cannot
+          # include itself in the archive.
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            ./ "$RUNNER_TEMP/package/pack/"
+
+          test -f "$RUNNER_TEMP/package/pack/manifest.json"
+          test -f "$RUNNER_TEMP/package/pack/${{ steps.meta.outputs.entry }}"
+
+      - name: Create mcaddon
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="cmdcorp_Air-v${{ steps.meta.outputs.version }}.mcaddon"
+
+          # A mcaddon is a regular zip. Its root is the behavior pack itself,
+          # so manifest.json and scripts/ sit directly at the top level.
+          (cd "$RUNNER_TEMP/package/pack" && zip -r -9 -X "../$OUT" .)
+
+          test -f "$RUNNER_TEMP/package/$OUT"
+          unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "manifest.json"
+          unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "${{ steps.meta.outputs.entry }}"
+          unzip -l "$RUNNER_TEMP/package/$OUT"
+
+          echo "file=$RUNNER_TEMP/package/$OUT" >> "$GITHUB_OUTPUT"
+
+      - name: Upload mcaddon
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcaddon-${{ steps.meta.outputs.version }}
+          path: ${{ steps.package.outputs.file }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.package.outputs.file }}
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          generate_release_notes: true
