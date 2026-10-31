@@ -129,7 +129,7 @@ export function getConsoleText(data, pl) {
         '§r------',
         `§r§lSpeed §r§a${speed.toFixed(2)}  §r§lGroundSpeed §r§a${groundSpeed.toFixed(2)}  §r§l${velocity.y < -config.AP_SINK_RATE_MAX ? '§c' : ''}VerticalVelocity §r§a${velocity.y.toFixed(2)}`,
         `§r§lAltitude §r§a${calcAlt(pl).toFixed(2)}  §r§lPitch §r§a${pl.getRotation().x.toFixed(2)}  §r§lYaw §r§a${pl.getRotation().y.toFixed(2)}  §r§l${isNaN(getDurabilityPercent(pl)) || (getDurabilityPercent(pl) >= config.AP_ETR_DAMAGE_MAX) ? '§c' : ''}ElytraDamage §r§a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? '' : '%'}`,
-        `§r------\n\n\n\n\n\n`
+        `§r------\n\n\n\n\n\n\n\n\n`
     ];
     return txt.join('\n');
 }

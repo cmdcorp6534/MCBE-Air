@@ -4008,6 +4008,9 @@ function getConsoleText(data, pl) {
 
 
 
+
+
+
 `
   ];
   return txt.join("\n");
