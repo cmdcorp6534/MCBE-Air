@@ -202,6 +202,9 @@ export function getGpwsWarnings(pl) {
         ? getSideImpactSpeed(velocity, forwardHit.face)
         : 0;
     const damagingObstacle = sideImpactSpeed > config.GPWS_KINETIC_DAMAGE_SPEED;
+    // 即使没有直接动能伤害，高空撞墙后也可能进入自由落体并造成摔落伤害。
+    const dangerousObstacle = damagingObstacle
+        || altitude > config.GPWS_FALL_DAMAGE_ALT;
 
     // 高空也会报 STALL；爬升和最后进近/接地阶段不报。
     const stall = !climbing && !landing
@@ -233,7 +236,7 @@ export function getGpwsWarnings(pl) {
         }
         if (obstacleDistance !== undefined
             && obstacleDistance < config.GPWS_FORWARD_CAUTION
-            && damagingObstacle) {
+            && dangerousObstacle) {
             warnings.push({ text: GPWS_CAUTION_TERRAIN_AHEAD, alert: false });
         }
         else if (!climbing && !landing

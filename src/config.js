@@ -14,6 +14,7 @@ export const GPWS_FORWARD_DIST = 80;
 export const GPWS_FORWARD_CAUTION = 60;
 export const GPWS_FORWARD_ALERT = 20;
 export const GPWS_FALL_DAMAGE_SINK = 0.5;
+export const GPWS_FALL_DAMAGE_ALT = 3;
 export const GPWS_KINETIC_DAMAGE_SPEED = 0.3;
 export const AP_ETR_DAMAGE_MAX = 80;
 export const AP_DISTANCE_REQUIREMENT = 50;

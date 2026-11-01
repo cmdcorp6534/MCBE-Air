@@ -3918,6 +3918,7 @@ var GPWS_FORWARD_DIST = 80;
 var GPWS_FORWARD_CAUTION = 60;
 var GPWS_FORWARD_ALERT = 20;
 var GPWS_FALL_DAMAGE_SINK = 0.5;
+var GPWS_FALL_DAMAGE_ALT = 3;
 var GPWS_KINETIC_DAMAGE_SPEED = 0.3;
 var AP_ETR_DAMAGE_MAX = 80;
 var AP_DISTANCE_REQUIREMENT = 50;
@@ -4053,6 +4054,7 @@ function getGpwsWarnings(pl) {
   const obstacleDistance = forwardHit !== void 0 && forwardHit.face !== mc.Direction.Up && forwardHit.face !== mc.Direction.Down ? forwardHit.distance : void 0;
   const sideImpactSpeed = forwardHit !== void 0 && obstacleDistance !== void 0 ? getSideImpactSpeed(velocity, forwardHit.face) : 0;
   const damagingObstacle = sideImpactSpeed > GPWS_KINETIC_DAMAGE_SPEED;
+  const dangerousObstacle = damagingObstacle || altitude > GPWS_FALL_DAMAGE_ALT;
   const stall = !climbing && !landing && pl.getRotation().x < -GPWS_STALL_PITCH;
   const lowSinkPullUp = !climbing && !landing && altitude < GPWS_PULL_UP_ALT && velocity.y < -GPWS_PULL_UP_SINK && forwardDistance !== void 0;
   const obstaclePullUp = obstacleDistance !== void 0 && obstacleDistance < GPWS_FORWARD_ALERT && damagingObstacle;
@@ -4066,7 +4068,7 @@ function getGpwsWarnings(pl) {
     if (!climbing && !landing && velocity.y < -AP_SINK_RATE_MAX) {
       warnings.push({ text: GPWS_CAUTION_SINK_RATE, alert: false });
     }
-    if (obstacleDistance !== void 0 && obstacleDistance < GPWS_FORWARD_CAUTION && damagingObstacle) {
+    if (obstacleDistance !== void 0 && obstacleDistance < GPWS_FORWARD_CAUTION && dangerousObstacle) {
       warnings.push({ text: GPWS_CAUTION_TERRAIN_AHEAD, alert: false });
     } else if (!climbing && !landing && altitude < AP_ALT_REQUIREMENT && velocity.y <= -GPWS_FALL_DAMAGE_SINK) {
       warnings.push({ text: GPWS_CAUTION_TERRAIN, alert: false });
