@@ -3915,6 +3915,11 @@ var FW_DATA = 3;
 
 // development_behavior_packs/cmdcorp_Air/src/texts.js
 var STICK_NAME = "\u98DE\u884C\u9762\u677F";
+var STICK_LORE_LIST = [
+  "\u4F7F\u7528\u6B64\u7269\u54C1\u6253\u5F00\u98DE\u884C\u9762\u677F",
+  "\u7535\u8111\u7AEF\u8BF7\u6309\u9F20\u6807\u53F3\u952E",
+  "\u79FB\u52A8\u7AEF\u8BF7\u957F\u6309\u5C4F\u5E55"
+];
 var CHOICE_TITLE = "\u9009\u9879";
 var AP_TITLE = "\u81EA\u52A8\u9A7E\u9A76";
 var AP_WP_UD = "\u8BF7\u7528 /cmdcorp_air:wpt \u5B9A\u4E49\u822A\u70B9";
@@ -4022,6 +4027,7 @@ var stick = () => {
   const stk = new mc2.ItemStack(MinecraftItemTypes.Stick, 1);
   stk.nameTag = STICK_NAME;
   stk.lockMode = mc2.ItemLockMode.slot;
+  stk.setLore(STICK_LORE_LIST);
   return stk;
 };
 (() => {

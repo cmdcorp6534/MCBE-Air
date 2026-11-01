@@ -19,6 +19,7 @@ const stick = () => {
     const stk = new mc.ItemStack(vanilla.MinecraftItemTypes.Stick, 1);
     stk.nameTag = texts.STICK_NAME;
     stk.lockMode = mc.ItemLockMode.slot;
+    stk.setLore(texts.STICK_LORE_LIST);
     return stk;
 }
 
