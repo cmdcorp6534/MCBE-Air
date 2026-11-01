@@ -59,16 +59,18 @@ jobs:
           rm -rf "$RUNNER_TEMP/package"
           mkdir -p "$RUNNER_TEMP/package/pack"
 
-          # Package the whole workspace as-is, except VCS/CI metadata.
-          # The staging directory lives outside the workspace, so it cannot
-          # include itself in the archive.
-          rsync -a \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            ./ "$RUNNER_TEMP/package/pack/"
+          # Ship only the runtime pack contents:
+          #   manifest.json, README.md, LICENSE, scripts/
+          # src/ is development source and must not be packaged.
+          cp manifest.json README.md LICENSE "$RUNNER_TEMP/package/pack/"
+          cp -R scripts "$RUNNER_TEMP/package/pack/scripts"
 
           test -f "$RUNNER_TEMP/package/pack/manifest.json"
+          test -f "$RUNNER_TEMP/package/pack/README.md"
+          test -f "$RUNNER_TEMP/package/pack/LICENSE"
           test -f "$RUNNER_TEMP/package/pack/${{ steps.meta.outputs.entry }}"
+          test -d "$RUNNER_TEMP/package/pack/scripts"
+          test ! -e "$RUNNER_TEMP/package/pack/src"
 
       - name: Create mcpack
         id: package
@@ -83,7 +85,13 @@ jobs:
 
           test -f "$RUNNER_TEMP/package/$OUT"
           unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "manifest.json"
+          unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "README.md"
+          unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "LICENSE"
           unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "${{ steps.meta.outputs.entry }}"
+          if unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -q '^src/'; then
+            echo "src/ must not be included in the mcpack" >&2
+            exit 1
+          fi
           unzip -l "$RUNNER_TEMP/package/$OUT"
 
           echo "file=$RUNNER_TEMP/package/$OUT" >> "$GITHUB_OUTPUT"

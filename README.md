@@ -124,20 +124,20 @@ ActionBar 会显示：
 | `AP_DISTANCE_REQUIREMENT` | `50` | 小于等于该距离时视为到达航点附近 |
 | `FW_DATA` | `3` | 发放的烟花飞行时间，范围 1–3 |
 
-修改这些值后，需要重新生成 [`scripts/build.js`](scripts/build.js)。
+修改这些值后，需要重新生成 [`scripts/air.js`](scripts/air.js)。
 
 ## 开发与构建
 
-- `src/` 是源码，[`scripts/build.js`](scripts/build.js) 是已经打包好的脚本，也是 `manifest.json` 的入口。
-- 仓库目前没有提交 `package.json` / 构建脚本；修改 `src/` 后，需要用 esbuild 重新生成 `scripts/build.js`（`@minecraft/server` 作为 external，`@minecraft/math` 和 `@minecraft/vanilla-data` 可以一起打包）。
-- 提交前确认 `scripts/build.js` 已更新，否则游戏和 Release 里运行的仍是旧代码。
+- `src/` 是源码，[`scripts/air.js`](scripts/air.js) 是已经打包好的脚本，也是 `manifest.json` 的入口。
+- 仓库目前没有提交 `package.json` / 构建脚本；修改 `src/` 后，需要用 esbuild 重新生成 `scripts/air.js`（`@minecraft/server` 作为 external，`@minecraft/math` 和 `@minecraft/vanilla-data` 可以一起打包）。
+- 提交前确认 `scripts/air.js` 已更新，否则游戏和 Release 里运行的仍是旧代码。
 
 GitHub Actions 的打包流程见 [`.github/workflows/package.yml`](.github/workflows/package.yml)：
 
 - push 到 `main`：生成 Actions artifact；
 - push `v*` tag：生成 `.mcpack` 并上传到对应的 GitHub Release；
-- Workflow 不执行 esbuild，直接使用已提交的 `scripts/build.js`；
-- 打包内容为工作区全部文件（排除 `.git/` 和 `.github/`），zip 根目录直接是 `manifest.json`、`scripts/`、`src/` 等。
+- Workflow 不执行 esbuild，直接使用已提交的 `scripts/air.js`；
+- 打包内容只包含 `manifest.json`、`README.md`、`LICENSE` 和 `scripts/` 目录，`src/` 不会进入 mcpack。
 
 发版示例：
 
