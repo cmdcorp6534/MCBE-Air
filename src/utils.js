@@ -10,6 +10,15 @@ import * as texts from './texts';
 /**
  * @param { mc.VectorXZ } currentLoc
  * @param { mc.VectorXZ } targetLoc
+ * @returns { number }
+ */
+export function calcDis(currentLoc, targetLoc) {
+    return mcmath.VectorXZUtils.distance(currentLoc, targetLoc);
+}
+
+/**
+ * @param { mc.VectorXZ } currentLoc
+ * @param { mc.VectorXZ } targetLoc
  * @returns { number | null } - Yaw but not pitch
  */
 export function calcYaw(currentLoc, targetLoc) {
@@ -43,7 +52,7 @@ export const defaultFlightConsole = () => {
         ap: {
             waypoint: undefined,
             status: false,
-            disableReason: texts.AP_DISABLE_WP_UD
+            disableReason: undefined
         },
         choice: undefined,
     };
@@ -107,6 +116,8 @@ export function getConsoleText(data, pl) {
     const groundVelocity = { x: velocity.x, z: velocity.z };
     const speed = mcmath.Vector3Utils.magnitude(velocity);
     const groundSpeed = mcmath.VectorXZUtils.magnitude(groundVelocity);
+    /** @type { mc.VectorXZ } */
+    const currentLoc = { x: pl.location.x, z: pl.location.z };
     const txt = [
         '§r------',
         `§r§l${texts.CHOICE_TITLE}`,
@@ -118,7 +129,7 @@ export function getConsoleText(data, pl) {
         '§r------',
         `§r§l${texts.AP_TITLE}`,
         (data.ap.waypoint !== undefined)
-        ? `§r§c${data.ap.waypoint.x.toFixed(2)} §9${data.ap.waypoint.z.toFixed(2)}`
+        ? `§r§lLocation §r§c${data.ap.waypoint.x.toFixed(2)} §9${data.ap.waypoint.z.toFixed(2)}  §r§lDistance §r§a${calcDis(currentLoc, data.ap.waypoint).toFixed(2)}`
         : `§r§e${texts.AP_WP_UD}`,
         (data.ap.status)
         ? `§r§a${texts.AP_ON}`

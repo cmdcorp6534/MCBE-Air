@@ -3938,6 +3938,9 @@ var AP_DISABLE_APPROACH = "\u5DF2\u5728\u822A\u70B9\u9644\u8FD1";
 var WP_CMD_DESCRIPTION = "\u8BBE\u7F6E\u822A\u70B9";
 
 // development_behavior_packs/cmdcorp_Air/src/utils.js
+function calcDis(currentLoc, targetLoc) {
+  return VectorXZUtils.distance(currentLoc, targetLoc);
+}
 function calcYaw(currentLoc, targetLoc) {
   const dir = VectorXZUtils.subtract(targetLoc, currentLoc);
   if (VectorXZUtils.magnitude(dir) <= AP_DISTANCE_REQUIREMENT) return null;
@@ -3950,7 +3953,7 @@ var defaultFlightConsole = () => {
     ap: {
       waypoint: void 0,
       status: false,
-      disableReason: AP_DISABLE_WP_UD
+      disableReason: void 0
     },
     choice: void 0
   };
@@ -3992,6 +3995,7 @@ function getConsoleText(data, pl) {
   const groundVelocity = { x: velocity.x, z: velocity.z };
   const speed = Vector3Utils.magnitude(velocity);
   const groundSpeed = VectorXZUtils.magnitude(groundVelocity);
+  const currentLoc = { x: pl.location.x, z: pl.location.z };
   const txt = [
     "\xA7r------",
     `\xA7r\xA7l${CHOICE_TITLE}`,
@@ -4002,7 +4006,7 @@ function getConsoleText(data, pl) {
     `\xA7r\xA7a${data.choice !== void 0 ? data.choice.remains : "N/A"}`,
     "\xA7r------",
     `\xA7r\xA7l${AP_TITLE}`,
-    data.ap.waypoint !== void 0 ? `\xA7r\xA7c${data.ap.waypoint.x.toFixed(2)} \xA79${data.ap.waypoint.z.toFixed(2)}` : `\xA7r\xA7e${AP_WP_UD}`,
+    data.ap.waypoint !== void 0 ? `\xA7r\xA7lLocation \xA7r\xA7c${data.ap.waypoint.x.toFixed(2)} \xA79${data.ap.waypoint.z.toFixed(2)}  \xA7r\xA7lDistance \xA7r\xA7a${calcDis(currentLoc, data.ap.waypoint).toFixed(2)}` : `\xA7r\xA7e${AP_WP_UD}`,
     data.ap.status ? `\xA7r\xA7a${AP_ON}` : data.ap.disableReason === void 0 ? `\xA7r\xA7e${AP_OFF}` : `\xA7r\xA7c${data.ap.disableReason}`,
     "\xA7r------",
     `\xA7r\xA7lSpeed \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGroundSpeed \xA7r\xA7a${groundSpeed.toFixed(2)}  \xA7r\xA7l${velocity.y < -AP_SINK_RATE_MAX ? "\xA7c" : ""}VerticalVelocity \xA7r\xA7a${velocity.y.toFixed(2)}`,
@@ -4161,11 +4165,6 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
           }
-        } else if (ap.disableReason === AP_DISABLE_WP_UD) {
-          if (ap.waypoint) {
-            ap.disableReason = void 0;
-            writeFlightConsole(p, consoleData);
-          }
         } else if (ap.disableReason === AP_DISABLE_NOT_GLIDING) {
           if (p.isGliding) {
             ap.disableReason = void 0;
@@ -4178,6 +4177,11 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
           }
         } else if (ap.disableReason === AP_DISABLE_ALT_LOW) {
           if (calcAlt(p) >= AP_ALT_REQUIREMENT) {
+            ap.disableReason = void 0;
+            writeFlightConsole(p, consoleData);
+          }
+        } else if (ap.disableReason === AP_DISABLE_WP_UD) {
+          if (ap.waypoint) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
           }
@@ -4194,11 +4198,6 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
         writeFlightConsole(p, consoleData);
         return;
       }
-      if (!ap.waypoint) {
-        ap.disableReason = AP_DISABLE_WP_UD;
-        writeFlightConsole(p, consoleData);
-        return;
-      }
       if (!p.isGliding) {
         ap.disableReason = AP_DISABLE_NOT_GLIDING;
         writeFlightConsole(p, consoleData);
@@ -4211,6 +4210,11 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
       }
       if (calcAlt(p) < AP_ALT_REQUIREMENT) {
         ap.disableReason = AP_DISABLE_ALT_LOW;
+        writeFlightConsole(p, consoleData);
+        return;
+      }
+      if (!ap.waypoint) {
+        ap.disableReason = AP_DISABLE_WP_UD;
         writeFlightConsole(p, consoleData);
         return;
       }

@@ -167,12 +167,6 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                         utils.writeFlightConsole(p, consoleData);
                     }
                 }
-                else if (ap.disableReason === texts.AP_DISABLE_WP_UD) {
-                    if (ap.waypoint) {
-                        ap.disableReason = undefined;
-                        utils.writeFlightConsole(p, consoleData);
-                    }
-                }
                 else if (ap.disableReason === texts.AP_DISABLE_NOT_GLIDING) {
                     if (p.isGliding) {
                         ap.disableReason = undefined;
@@ -191,6 +185,12 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                         utils.writeFlightConsole(p, consoleData);
                     }
                 }
+                else if (ap.disableReason === texts.AP_DISABLE_WP_UD) {
+                    if (ap.waypoint) {
+                        ap.disableReason = undefined;
+                        utils.writeFlightConsole(p, consoleData);
+                    }
+                }
                 else if (ap.disableReason === texts.AP_DISABLE_APPROACH) {
                     if (!ap.waypoint) return;
                     if (utils.calcYaw(currentLoc, ap.waypoint) !== null) {
@@ -201,11 +201,6 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
             }
             if (isNaN(utils.getDurabilityPercent(p)) || (utils.getDurabilityPercent(p) >= config.AP_ETR_DAMAGE_MAX)) {
                 ap.disableReason = texts.AP_DISABLE_DAMAGE;
-                utils.writeFlightConsole(p, consoleData);
-                return;
-            }
-            if (!ap.waypoint) {
-                ap.disableReason = texts.AP_DISABLE_WP_UD;
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
@@ -221,6 +216,11 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
             }
             if (utils.calcAlt(p) < config.AP_ALT_REQUIREMENT) {
                 ap.disableReason = texts.AP_DISABLE_ALT_LOW;
+                utils.writeFlightConsole(p, consoleData);
+                return;
+            }
+            if (!ap.waypoint) {
+                ap.disableReason = texts.AP_DISABLE_WP_UD;
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
