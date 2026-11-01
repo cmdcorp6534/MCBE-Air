@@ -105,27 +105,29 @@ HUD 最下方有一栏“注意与警告”。正常飞行时该栏为空；触�
 
 | 警告 | 类型 | 触发条件 |
 | --- | --- | --- |
-| `PULL UP` | Alert（粗体红色） | 低高度下降且前向检测到地形（高度 < 30、下降 > 0.5 格/刻），或前方侧面障碍距离 < 20 格 |
-| `STALL` | Alert（粗体红色） | 非爬升状态下，仰角超过 60°（`Pitch < -60`）；高空也会报告 |
-| `SINK RATE` | Caution（粗体黄色） | 下降速度超过 0.8 格/刻（16 m/s），且没有 `PULL UP` |
-| `TERRAIN AHEAD` | Caution（粗体黄色） | 前向检测到 60 格内的侧面地形/障碍，且没有 `PULL UP` |
-| `TERRAIN` | Caution（粗体黄色） | 高度低于 30 格，且没有 `PULL UP`、也不是前向地形警告 |
+| `PULL UP` | Alert（粗体红色） | 低高度下降且前向检测到地形（高度 < 30、下降 > 0.5 格/刻），或前方侧面障碍距离 < 20 格且撞击速度足以造成动能伤害 |
+| `STALL` | Alert（粗体红色） | 非爬升、非接地阶段，仰角超过 60°（`Pitch < -60`）；高空也会报告 |
+| `SINK RATE` | Caution（粗体黄色） | 非爬升、非接地阶段，下降速度超过 0.8 格/刻（16 m/s），且没有 `PULL UP` |
+| `TERRAIN AHEAD` | Caution（粗体黄色） | 前向检测到 60 格内的侧面地形/障碍，且撞击速度足以造成动能伤害，并且没有 `PULL UP` |
+| `TERRAIN` | Caution（粗体黄色） | 非爬升、非接地阶段，高度低于 30 格，垂直速度达到 0.5 格/刻（10 m/s，可能产生摔落伤害），且没有 `PULL UP`、也不是前向地形警告 |
 | `ELYTRA DAMAGE` | Caution（粗体黄色） | 鞘翅耐久损耗达到 80%（`AP_ETR_DAMAGE_MAX`） |
 
 补充规则：
 
-- `VerticalSpeed > 0`（正在爬升）时不报 GPWS，避免刚起飞就报警，也避免 STALL 在爬升时误报；
-- 高度低于 30 格且下降速度小于 0.2 格/刻（4 m/s）时，视为最后进近/接地阶段，不报 GPWS；
+- 爬升阶段（`VerticalSpeed > 0`）不报 `STALL`、`SINK RATE`、`TERRAIN` 和低高度 `PULL UP`，但**前向侧面障碍仍然会触发 `TERRAIN AHEAD` / `PULL UP`**，避免起飞时撞墙；
+- 高度低于 30 格且下降速度小于 0.2 格/刻（4 m/s）时，视为最后进近/接地阶段，地面类警告静默，但前向侧面障碍仍然生效；
 - `PULL UP` 显示时，不再同时显示 `SINK RATE`、`TERRAIN AHEAD` 和 `TERRAIN`；
 - `PULL UP` 与 `STALL` 不会同时出现，STALL 优先级更高；
 - `ELYTRA DAMAGE` 是持续警告，不受起飞/接地静默影响；
 - 前向检测沿玩家速度方向、从头部发射，最大 80 格；只有命中方块**侧面**才算 `TERRAIN AHEAD` 障碍，顶面/底面会被忽略，所以竖直俯冲时不会把地面误报成 `TERRAIN AHEAD`；
 - 低高度 `PULL UP` 仍可用任意前向地形确认，减少在虚空/开阔空域中的误报；
+- 根据 Wiki 的摔落伤害规则，垂直速度小于 0.5 格/刻（10 m/s）时下落高度会重置，通常不会摔伤，因此 `TERRAIN` 只在垂直速度达到 0.5 格/刻时显示；
+- 根据 Wiki 的动能伤害公式，水平撞击速度不大于 0.3 格/刻（6 m/s）时不会造成动能伤害，因此 `TERRAIN AHEAD` 和侧面障碍触发的 `PULL UP` 只在撞击速度大于 0.3 格/刻时显示；
 - 警报合并为一行，Alert 在前、Caution 在后，例如 `STALL SINK RATE`。
 
 > 速度单位说明：Script API 的 `getVelocity()` 返回格/游戏刻（block/tick），Wiki 通常使用米/秒；换算为 1 格/刻 = 20 格/秒。`0.5 格/刻 ≈ 10 m/s`，`0.8 格/刻 = 16 m/s`，`1.0 格/刻 ≈ 20 m/s`。
 
-自动驾驶处于接通状态时，任意 Caution/Alert 都会断开 AP，禁用原因显示为 `GPWS`。当所有 Caution/Alert 解除后，如果 AP 原本处于接通状态，会自动恢复；如果仍存在其他禁用条件，则保持断开并显示对应原因。
+自动驾驶处于接通状态时，任意 Caution/Alert 都会断开 AP，禁用原因显示为 `GPWS`。警告解除后 AP **不会自动恢复接通**，需要手动重新选择“自动驾驶”；如果仍存在其他禁用条件，则继续显示对应原因。
 
 ## 飞行 HUD
 
@@ -140,6 +142,13 @@ ActionBar 会显示：
 - `Pitch` / `Yaw`：俯仰角和偏航角；
 - `ElytraDamage`：鞘翅耐久损耗百分比；
 - “注意与警告”：GPWS Caution/Alert。
+
+当 GPWS 发出警告时，仪表区内相关参数名称会变红：
+
+- `Altitude`：`PULL UP`、`TERRAIN AHEAD`、`TERRAIN`；
+- `VerticalVelocity`：`SINK RATE`、`TERRAIN`，或由下降率触发的 `PULL UP`；
+- `Pitch`：`STALL`；
+- `ElytraDamage`：`ELYTRA DAMAGE`。
 
 ## 可调参数
 
@@ -158,6 +167,8 @@ ActionBar 会显示：
 | `GPWS_FORWARD_DIST` | `80` | 前向检测最大距离（格） |
 | `GPWS_FORWARD_CAUTION` | `60` | `TERRAIN AHEAD` 警戒距离（格） |
 | `GPWS_FORWARD_ALERT` | `20` | 触发 `PULL UP` 的前向障碍距离（格） |
+| `GPWS_FALL_DAMAGE_SINK` | `0.5` | 可能造成摔落伤害的垂直速度阈值（格/刻，10 m/s） |
+| `GPWS_KINETIC_DAMAGE_SPEED` | `0.3` | 可能造成动能伤害的水平撞击速度阈值（格/刻，6 m/s） |
 | `AP_ETR_DAMAGE_MAX` | `80` | 鞘翅耐久损耗达到该百分比时触发 `ELYTRA DAMAGE` |
 | `AP_DISTANCE_REQUIREMENT` | `50` | 小于等于该距离时视为到达航点附近 |
 | `FW_DATA` | `3` | 发放的烟花飞行时间，范围 1–3 |

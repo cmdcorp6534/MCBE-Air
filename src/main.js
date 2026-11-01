@@ -146,19 +146,12 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
             if (gpwsWarnings.length > 0) {
                 if (ap.status) {
                     ap.status = false;
-                    ap.gpwsRecover = true;
                 }
                 ap.disableReason = utils.GPWS_REASON;
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
             if (ap.disableReason === utils.GPWS_REASON) {
-                ap.disableReason = undefined;
-                utils.writeFlightConsole(p, consoleData);
-            }
-            if (ap.gpwsRecover) {
-                ap.gpwsRecover = false;
-                ap.status = true;
                 ap.disableReason = undefined;
                 utils.writeFlightConsole(p, consoleData);
             }

@@ -42,7 +42,6 @@ export function calcYaw(currentLoc, targetLoc) {
  * @property { mc.VectorXZ | undefined } waypoint
  * @property { boolean } status
  * @property { string | undefined } disableReason
- * @property { boolean | undefined } gpwsRecover
  */
 /**
  * @typedef { Object } Choice
@@ -67,8 +66,7 @@ export const defaultFlightConsole = () => {
         ap: {
             waypoint: undefined,
             status: false,
-            disableReason: undefined,
-            gpwsRecover: false
+            disableReason: undefined
         },
         choice: undefined,
     };
@@ -153,6 +151,22 @@ export function getForwardHit(pl) {
 }
 
 /**
+ * @param { mc.Vector3 } velocity
+ * @param { mc.Direction } face
+ * @returns { number }
+ */
+export function getSideImpactSpeed(velocity, face) {
+    const horizontalSpeed = Math.hypot(velocity.x, velocity.z);
+    if (face === mc.Direction.North || face === mc.Direction.South) {
+        return Math.max(0, horizontalSpeed - Math.abs(velocity.x));
+    }
+    if (face === mc.Direction.East || face === mc.Direction.West) {
+        return Math.max(0, horizontalSpeed - Math.abs(velocity.z));
+    }
+    return 0;
+}
+
+/**
  * @param { mc.Player } pl
  * @returns { GpwsWarning[] }
  */
@@ -170,13 +184,11 @@ export function getGpwsWarnings(pl) {
         warnings.push({ text: GPWS_CAUTION_ELYTRA_DAMAGE, alert: false });
     }
 
-    // 刚起飞/爬升阶段不报 GPWS；VerticalSpeed 为正时不触发 STALL。
-    if (velocity.y > 0) return warnings;
-
-    // 最后进近/接地阶段：低高度且下降平缓时不报 GPWS。
-    if (altitude < config.GPWS_LANDING_ALT && velocity.y > -config.GPWS_LANDING_SINK) {
-        return warnings;
-    }
+    const climbing = velocity.y > 0;
+    // 最后进近/接地阶段：低高度且下降平缓时不报地面类 GPWS。
+    const landing = !climbing
+        && altitude < config.GPWS_LANDING_ALT
+        && velocity.y > -config.GPWS_LANDING_SINK;
 
     const forwardHit = getForwardHit(pl);
     const forwardDistance = forwardHit?.distance;
@@ -186,16 +198,24 @@ export function getGpwsWarnings(pl) {
         && forwardHit.face !== mc.Direction.Down)
         ? forwardHit.distance
         : undefined;
+    const sideImpactSpeed = (forwardHit !== undefined && obstacleDistance !== undefined)
+        ? getSideImpactSpeed(velocity, forwardHit.face)
+        : 0;
+    const damagingObstacle = sideImpactSpeed > config.GPWS_KINETIC_DAMAGE_SPEED;
 
-    // 高空也会报 STALL；爬升阶段已在上面提前返回。
-    const stall = pl.getRotation().x < -config.GPWS_STALL_PITCH;
+    // 高空也会报 STALL；爬升和最后进近/接地阶段不报。
+    const stall = !climbing && !landing
+        && pl.getRotation().x < -config.GPWS_STALL_PITCH;
 
     // 低高度下降由前向地形确认；前向障碍过近也直接 PULL UP。
-    const lowSinkPullUp = altitude < config.GPWS_PULL_UP_ALT
+    const lowSinkPullUp = !climbing && !landing
+        && altitude < config.GPWS_PULL_UP_ALT
         && velocity.y < -config.GPWS_PULL_UP_SINK
         && forwardDistance !== undefined;
+    // 前向障碍即使正在爬升/接地也要报，但撞击速度不足以造成动能伤害时不报。
     const obstaclePullUp = obstacleDistance !== undefined
-        && obstacleDistance < config.GPWS_FORWARD_ALERT;
+        && obstacleDistance < config.GPWS_FORWARD_ALERT
+        && damagingObstacle;
 
     // STALL 优先，避免 PULL UP 与 STALL 同时出现。
     const pullUp = !stall && (lowSinkPullUp || obstaclePullUp);
@@ -208,13 +228,17 @@ export function getGpwsWarnings(pl) {
     }
 
     if (!pullUp) {
-        if (velocity.y < -config.AP_SINK_RATE_MAX) {
+        if (!climbing && !landing && velocity.y < -config.AP_SINK_RATE_MAX) {
             warnings.push({ text: GPWS_CAUTION_SINK_RATE, alert: false });
         }
-        if (obstacleDistance !== undefined && obstacleDistance < config.GPWS_FORWARD_CAUTION) {
+        if (obstacleDistance !== undefined
+            && obstacleDistance < config.GPWS_FORWARD_CAUTION
+            && damagingObstacle) {
             warnings.push({ text: GPWS_CAUTION_TERRAIN_AHEAD, alert: false });
         }
-        else if (altitude < config.AP_ALT_REQUIREMENT) {
+        else if (!climbing && !landing
+            && altitude < config.AP_ALT_REQUIREMENT
+            && velocity.y <= -config.GPWS_FALL_DAMAGE_SINK) {
             warnings.push({ text: GPWS_CAUTION_TERRAIN, alert: false });
         }
     }
@@ -255,7 +279,21 @@ export function getConsoleText(data, pl) {
     const gpwsLine = [
         ...gpwsWarnings.filter(warning => warning.alert).map(warning => `§r§l§c${warning.text}`),
         ...gpwsWarnings.filter(warning => !warning.alert).map(warning => `§r§l§e${warning.text}`)
-    ].join(' ');
+    ].join('  ');
+    /**
+     * @param { string } text
+     * @returns { boolean }
+     */
+    const hasWarning = (text) => gpwsWarnings.some(warning => warning.text === text);
+    const warnPullUp = hasWarning(GPWS_ALERT_PULL_UP);
+    const warnStall = hasWarning(GPWS_ALERT_STALL);
+    const warnSinkRate = hasWarning(GPWS_CAUTION_SINK_RATE);
+    const warnTerrainAhead = hasWarning(GPWS_CAUTION_TERRAIN_AHEAD);
+    const warnTerrain = hasWarning(GPWS_CAUTION_TERRAIN);
+    const warnElytraDamage = hasWarning(GPWS_CAUTION_ELYTRA_DAMAGE);
+    const redAltitude = warnPullUp || warnTerrainAhead || warnTerrain;
+    const redVerticalVelocity = warnSinkRate || warnTerrain
+        || (warnPullUp && velocity.y < -config.GPWS_PULL_UP_SINK);
     const txt = [
         '§r------',
         `§r§l${texts.CHOICE_TITLE}`,
@@ -276,12 +314,12 @@ export function getConsoleText(data, pl) {
             : `§r§c${data.ap.disableReason}`
         ),
         '§r------',
-        `§r§lSpeed §r§a${speed.toFixed(2)}  §r§lGroundSpeed §r§a${groundSpeed.toFixed(2)}  §r§l${velocity.y < -config.AP_SINK_RATE_MAX ? '§c' : ''}VerticalVelocity §r§a${velocity.y.toFixed(2)}`,
-        `§r§lAltitude §r§a${calcAlt(pl).toFixed(2)}  §r§lPitch §r§a${pl.getRotation().x.toFixed(2)}  §r§lYaw §r§a${pl.getRotation().y.toFixed(2)}  §r§l${isNaN(getDurabilityPercent(pl)) || (getDurabilityPercent(pl) >= config.AP_ETR_DAMAGE_MAX) ? '§c' : ''}ElytraDamage §r§a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? '' : '%'}`,
+        `§r§lSpeed §r§a${speed.toFixed(2)}  §r§lGroundSpeed §r§a${groundSpeed.toFixed(2)}  §r§l${redVerticalVelocity ? '§c' : ''}VerticalVelocity §r§a${velocity.y.toFixed(2)}`,
+        `§r§l${redAltitude ? '§c' : ''}Altitude §r§a${calcAlt(pl).toFixed(2)}  §r§l${warnStall ? '§c' : ''}Pitch §r§a${pl.getRotation().x.toFixed(2)}  §r§lYaw §r§a${pl.getRotation().y.toFixed(2)}  §r§l${warnElytraDamage ? '§c' : ''}ElytraDamage §r§a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? '' : '%'}`,
         '§r------',
         `§r§l${texts.GPWS_TITLE}`,
-        ...(gpwsLine ? [gpwsLine] : []),
-        `§r------\n\n\n\n\n\n\n\n\n`
+        gpwsLine || '',
+        `§r------\n\n\n\n\n\n\n\n\n\n\n\n`
     ];
     return txt.join('\n');
 }

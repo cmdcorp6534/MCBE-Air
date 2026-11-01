@@ -3917,6 +3917,8 @@ var GPWS_LANDING_SINK = 0.2;
 var GPWS_FORWARD_DIST = 80;
 var GPWS_FORWARD_CAUTION = 60;
 var GPWS_FORWARD_ALERT = 20;
+var GPWS_FALL_DAMAGE_SINK = 0.5;
+var GPWS_KINETIC_DAMAGE_SPEED = 0.3;
 var AP_ETR_DAMAGE_MAX = 80;
 var AP_DISTANCE_REQUIREMENT = 50;
 var FW_DATA = 3;
@@ -3966,8 +3968,7 @@ var defaultFlightConsole = () => {
     ap: {
       waypoint: void 0,
       status: false,
-      disableReason: void 0,
-      gpwsRecover: false
+      disableReason: void 0
     },
     choice: void 0
   };
@@ -4026,6 +4027,16 @@ function getForwardHit(pl) {
     return void 0;
   }
 }
+function getSideImpactSpeed(velocity, face) {
+  const horizontalSpeed = Math.hypot(velocity.x, velocity.z);
+  if (face === mc.Direction.North || face === mc.Direction.South) {
+    return Math.max(0, horizontalSpeed - Math.abs(velocity.x));
+  }
+  if (face === mc.Direction.East || face === mc.Direction.West) {
+    return Math.max(0, horizontalSpeed - Math.abs(velocity.z));
+  }
+  return 0;
+}
 function getGpwsWarnings(pl) {
   if (!pl.isGliding) return [];
   const velocity = pl.getVelocity();
@@ -4035,16 +4046,16 @@ function getGpwsWarnings(pl) {
   if (isNaN(elytraDamage) || elytraDamage >= AP_ETR_DAMAGE_MAX) {
     warnings.push({ text: GPWS_CAUTION_ELYTRA_DAMAGE, alert: false });
   }
-  if (velocity.y > 0) return warnings;
-  if (altitude < GPWS_LANDING_ALT && velocity.y > -GPWS_LANDING_SINK) {
-    return warnings;
-  }
+  const climbing = velocity.y > 0;
+  const landing = !climbing && altitude < GPWS_LANDING_ALT && velocity.y > -GPWS_LANDING_SINK;
   const forwardHit = getForwardHit(pl);
   const forwardDistance = forwardHit?.distance;
   const obstacleDistance = forwardHit !== void 0 && forwardHit.face !== mc.Direction.Up && forwardHit.face !== mc.Direction.Down ? forwardHit.distance : void 0;
-  const stall = pl.getRotation().x < -GPWS_STALL_PITCH;
-  const lowSinkPullUp = altitude < GPWS_PULL_UP_ALT && velocity.y < -GPWS_PULL_UP_SINK && forwardDistance !== void 0;
-  const obstaclePullUp = obstacleDistance !== void 0 && obstacleDistance < GPWS_FORWARD_ALERT;
+  const sideImpactSpeed = forwardHit !== void 0 && obstacleDistance !== void 0 ? getSideImpactSpeed(velocity, forwardHit.face) : 0;
+  const damagingObstacle = sideImpactSpeed > GPWS_KINETIC_DAMAGE_SPEED;
+  const stall = !climbing && !landing && pl.getRotation().x < -GPWS_STALL_PITCH;
+  const lowSinkPullUp = !climbing && !landing && altitude < GPWS_PULL_UP_ALT && velocity.y < -GPWS_PULL_UP_SINK && forwardDistance !== void 0;
+  const obstaclePullUp = obstacleDistance !== void 0 && obstacleDistance < GPWS_FORWARD_ALERT && damagingObstacle;
   const pullUp = !stall && (lowSinkPullUp || obstaclePullUp);
   if (pullUp) {
     warnings.push({ text: GPWS_ALERT_PULL_UP, alert: true });
@@ -4052,12 +4063,12 @@ function getGpwsWarnings(pl) {
     warnings.push({ text: GPWS_ALERT_STALL, alert: true });
   }
   if (!pullUp) {
-    if (velocity.y < -AP_SINK_RATE_MAX) {
+    if (!climbing && !landing && velocity.y < -AP_SINK_RATE_MAX) {
       warnings.push({ text: GPWS_CAUTION_SINK_RATE, alert: false });
     }
-    if (obstacleDistance !== void 0 && obstacleDistance < GPWS_FORWARD_CAUTION) {
+    if (obstacleDistance !== void 0 && obstacleDistance < GPWS_FORWARD_CAUTION && damagingObstacle) {
       warnings.push({ text: GPWS_CAUTION_TERRAIN_AHEAD, alert: false });
-    } else if (altitude < AP_ALT_REQUIREMENT) {
+    } else if (!climbing && !landing && altitude < AP_ALT_REQUIREMENT && velocity.y <= -GPWS_FALL_DAMAGE_SINK) {
       warnings.push({ text: GPWS_CAUTION_TERRAIN, alert: false });
     }
   }
@@ -4083,7 +4094,16 @@ function getConsoleText(data, pl) {
   const gpwsLine = [
     ...gpwsWarnings.filter((warning) => warning.alert).map((warning) => `\xA7r\xA7l\xA7c${warning.text}`),
     ...gpwsWarnings.filter((warning) => !warning.alert).map((warning) => `\xA7r\xA7l\xA7e${warning.text}`)
-  ].join(" ");
+  ].join("  ");
+  const hasWarning = (text) => gpwsWarnings.some((warning) => warning.text === text);
+  const warnPullUp = hasWarning(GPWS_ALERT_PULL_UP);
+  const warnStall = hasWarning(GPWS_ALERT_STALL);
+  const warnSinkRate = hasWarning(GPWS_CAUTION_SINK_RATE);
+  const warnTerrainAhead = hasWarning(GPWS_CAUTION_TERRAIN_AHEAD);
+  const warnTerrain = hasWarning(GPWS_CAUTION_TERRAIN);
+  const warnElytraDamage = hasWarning(GPWS_CAUTION_ELYTRA_DAMAGE);
+  const redAltitude = warnPullUp || warnTerrainAhead || warnTerrain;
+  const redVerticalVelocity = warnSinkRate || warnTerrain || warnPullUp && velocity.y < -GPWS_PULL_UP_SINK;
   const txt = [
     "\xA7r------",
     `\xA7r\xA7l${CHOICE_TITLE}`,
@@ -4097,12 +4117,15 @@ function getConsoleText(data, pl) {
     data.ap.waypoint !== void 0 ? `\xA7r\xA7lLocation \xA7r\xA7c${data.ap.waypoint.x.toFixed(2)} \xA79${data.ap.waypoint.z.toFixed(2)}  \xA7r\xA7lDistance \xA7r\xA7a${calcDis(currentLoc, data.ap.waypoint).toFixed(2)}` : `\xA7r\xA7e${AP_WP_UD}`,
     data.ap.status ? `\xA7r\xA7a${AP_ON}` : data.ap.disableReason === void 0 ? `\xA7r\xA7e${AP_OFF}` : `\xA7r\xA7c${data.ap.disableReason}`,
     "\xA7r------",
-    `\xA7r\xA7lSpeed \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGroundSpeed \xA7r\xA7a${groundSpeed.toFixed(2)}  \xA7r\xA7l${velocity.y < -AP_SINK_RATE_MAX ? "\xA7c" : ""}VerticalVelocity \xA7r\xA7a${velocity.y.toFixed(2)}`,
-    `\xA7r\xA7lAltitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7lPitch \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lYaw \xA7r\xA7a${pl.getRotation().y.toFixed(2)}  \xA7r\xA7l${isNaN(getDurabilityPercent(pl)) || getDurabilityPercent(pl) >= AP_ETR_DAMAGE_MAX ? "\xA7c" : ""}ElytraDamage \xA7r\xA7a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? "" : "%"}`,
+    `\xA7r\xA7lSpeed \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGroundSpeed \xA7r\xA7a${groundSpeed.toFixed(2)}  \xA7r\xA7l${redVerticalVelocity ? "\xA7c" : ""}VerticalVelocity \xA7r\xA7a${velocity.y.toFixed(2)}`,
+    `\xA7r\xA7l${redAltitude ? "\xA7c" : ""}Altitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7l${warnStall ? "\xA7c" : ""}Pitch \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lYaw \xA7r\xA7a${pl.getRotation().y.toFixed(2)}  \xA7r\xA7l${warnElytraDamage ? "\xA7c" : ""}ElytraDamage \xA7r\xA7a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? "" : "%"}`,
     "\xA7r------",
     `\xA7r\xA7l${GPWS_TITLE}`,
-    ...gpwsLine ? [gpwsLine] : [],
+    gpwsLine || "",
     `\xA7r------
+
+
+
 
 
 
@@ -4237,19 +4260,12 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
       if (gpwsWarnings.length > 0) {
         if (ap.status) {
           ap.status = false;
-          ap.gpwsRecover = true;
         }
         ap.disableReason = GPWS_REASON;
         writeFlightConsole(p, consoleData);
         return;
       }
       if (ap.disableReason === GPWS_REASON) {
-        ap.disableReason = void 0;
-        writeFlightConsole(p, consoleData);
-      }
-      if (ap.gpwsRecover) {
-        ap.gpwsRecover = false;
-        ap.status = true;
         ap.disableReason = void 0;
         writeFlightConsole(p, consoleData);
       }
