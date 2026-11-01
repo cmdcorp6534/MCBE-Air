@@ -4,7 +4,7 @@
         "name": "天空即为极限",
         "description": "天空即为极限 - 行为包",
         "uuid": "67ca5fc8-fd68-4771-80a1-a39ddba9bdc8",
-        "version": [ 1, 0, 3 ],
+        "version": [ 1, 0, 2 ],
         "min_engine_version": [ 1, 21, 0 ]
     },
     "modules": [
@@ -17,7 +17,7 @@
             "type": "script",
             "uuid": "17a16c21-b068-4807-964b-5af401a21c4a",
             "version": [ 1, 0, 1 ],
-            "entry": "build/air.js",
+            "entry": "scripts/build.js",
             "language": "javascript"
         }
     ],
