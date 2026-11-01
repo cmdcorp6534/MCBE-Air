@@ -154,5 +154,11 @@ git push origin v1.0.0
 
 本项目使用 [GNU Affero General Public License v3.0](LICENSE)。
 
+## 鸣谢
+
+1. 本项目灵感来源于纪录片《空中浩劫》，原名 *Air Crash Investigation* 或 *Mayday* 。
+2. 本项目少部分内容为人工智能 *DeepSeek* 编写。
+
 ## 声明
+
 此 README 由人工智能生成，不保证与实际情况完全相符，具体情况请进入游戏体验。
