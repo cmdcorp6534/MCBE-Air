@@ -75,20 +75,6 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
 });
 
 (() => {
-    function showConsole() {
-        const players = mc.world.getAllPlayers();
-        players.forEach(p => {
-            const consoleData = utils.getFlightConsole(p);
-            if (!consoleData) return;
-            const menu = utils.getConsoleText(consoleData, p);
-            p.onScreenDisplay.setActionBar(menu);
-        });
-        mc.system.run(showConsole);
-    }
-    mc.system.run(showConsole);
-})();
-
-(() => {
     function executer() {
         const players = mc.world.getAllPlayers();
         players.forEach(p => {
@@ -155,32 +141,42 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
             const consoleData = utils.getFlightConsole(p);
             if (!consoleData) return;
             const ap = consoleData.ap;
+
+            const gpwsWarnings = utils.getGpwsWarnings(p);
+            if (gpwsWarnings.length > 0) {
+                if (ap.status) {
+                    ap.status = false;
+                    ap.gpwsRecover = true;
+                }
+                ap.disableReason = utils.GPWS_REASON;
+                utils.writeFlightConsole(p, consoleData);
+                return;
+            }
+            if (ap.disableReason === utils.GPWS_REASON) {
+                ap.disableReason = undefined;
+                utils.writeFlightConsole(p, consoleData);
+            }
+            if (ap.gpwsRecover) {
+                ap.gpwsRecover = false;
+                ap.status = true;
+                ap.disableReason = undefined;
+                utils.writeFlightConsole(p, consoleData);
+            }
+
+            // 清理旧版本遗留的 AP 禁用原因，避免升级后一直卡在旧状态。
+            if (ap.disableReason === '高度过低' || ap.disableReason === '下降率过大' || ap.disableReason === '鞘翅损坏') {
+                ap.disableReason = undefined;
+                utils.writeFlightConsole(p, consoleData);
+            }
+
             /** @type { mc.VectorXZ } */
             const currentLoc = {
                 x: p.location.x,
                 z: p.location.z
             };
             if (ap.disableReason) {
-                if (ap.disableReason === texts.AP_DISABLE_DAMAGE) {
-                    if (!isNaN(utils.getDurabilityPercent(p)) && (utils.getDurabilityPercent(p) < config.AP_ETR_DAMAGE_MAX)) {
-                        ap.disableReason = undefined;
-                        utils.writeFlightConsole(p, consoleData);
-                    }
-                }
-                else if (ap.disableReason === texts.AP_DISABLE_NOT_GLIDING) {
+                if (ap.disableReason === texts.AP_DISABLE_NOT_GLIDING) {
                     if (p.isGliding) {
-                        ap.disableReason = undefined;
-                        utils.writeFlightConsole(p, consoleData);
-                    }
-                }
-                else if (ap.disableReason === texts.AP_DISABLE_SINK_RATE) {
-                    if (p.getVelocity().y >= -config.AP_SINK_RATE_MAX) {
-                        ap.disableReason = undefined;
-                        utils.writeFlightConsole(p, consoleData);
-                    }
-                }
-                else if (ap.disableReason === texts.AP_DISABLE_ALT_LOW) {
-                    if (utils.calcAlt(p) >= config.AP_ALT_REQUIREMENT) {
                         ap.disableReason = undefined;
                         utils.writeFlightConsole(p, consoleData);
                     }
@@ -199,23 +195,8 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                     }
                 }
             }
-            if (isNaN(utils.getDurabilityPercent(p)) || (utils.getDurabilityPercent(p) >= config.AP_ETR_DAMAGE_MAX)) {
-                ap.disableReason = texts.AP_DISABLE_DAMAGE;
-                utils.writeFlightConsole(p, consoleData);
-                return;
-            }
             if (!p.isGliding) {
                 ap.disableReason = texts.AP_DISABLE_NOT_GLIDING;
-                utils.writeFlightConsole(p, consoleData);
-                return;
-            }
-            if (p.getVelocity().y < -config.AP_SINK_RATE_MAX) {
-                ap.disableReason = texts.AP_DISABLE_SINK_RATE;
-                utils.writeFlightConsole(p, consoleData);
-                return;
-            }
-            if (utils.calcAlt(p) < config.AP_ALT_REQUIREMENT) {
-                ap.disableReason = texts.AP_DISABLE_ALT_LOW;
                 utils.writeFlightConsole(p, consoleData);
                 return;
             }
@@ -280,6 +261,20 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
         mc.system.run(apNav);
     }
     mc.system.run(apNav);
+})();
+
+(() => {
+    function showConsole() {
+        const players = mc.world.getAllPlayers();
+        players.forEach(p => {
+            const consoleData = utils.getFlightConsole(p);
+            if (!consoleData) return;
+            const menu = utils.getConsoleText(consoleData, p);
+            p.onScreenDisplay.setActionBar(menu);
+        });
+        mc.system.run(showConsole);
+    }
+    mc.system.run(showConsole);
 })();
 
 mc.system.beforeEvents.startup.subscribe(eventData => {

@@ -7,6 +7,14 @@ import * as mcmath from '@minecraft/math';
 import * as config from './config';
 import * as texts from './texts';
 
+export const GPWS_ALERT_PULL_UP = 'PULL UP';
+export const GPWS_ALERT_STALL = 'STALL';
+export const GPWS_CAUTION_SINK_RATE = 'SINK RATE';
+export const GPWS_CAUTION_TERRAIN = 'TERRAIN';
+export const GPWS_CAUTION_TERRAIN_AHEAD = 'TERRAIN AHEAD';
+export const GPWS_CAUTION_ELYTRA_DAMAGE = 'ELYTRA DAMAGE';
+export const GPWS_REASON = 'GPWS';
+
 /**
  * @param { mc.VectorXZ } currentLoc
  * @param { mc.VectorXZ } targetLoc
@@ -34,6 +42,7 @@ export function calcYaw(currentLoc, targetLoc) {
  * @property { mc.VectorXZ | undefined } waypoint
  * @property { boolean } status
  * @property { string | undefined } disableReason
+ * @property { boolean | undefined } gpwsRecover
  */
 /**
  * @typedef { Object } Choice
@@ -46,13 +55,20 @@ export function calcYaw(currentLoc, targetLoc) {
  * @property { Choice | undefined } choice
  */
 
+/**
+ * @typedef { Object } GpwsWarning
+ * @property { string } text
+ * @property { boolean } alert
+ */
+
 /** @returns { FlightConsole } */
 export const defaultFlightConsole = () => {
     return {
         ap: {
             waypoint: undefined,
             status: false,
-            disableReason: undefined
+            disableReason: undefined,
+            gpwsRecover: false
         },
         choice: undefined,
     };
@@ -91,6 +107,112 @@ export function calcAlt(pl) {
 
 /**
  * @param { mc.Player } pl
+ * @returns { number | undefined }
+ */
+export function getForwardDistance(pl) {
+    const velocity = pl.getVelocity();
+    const speed = mcmath.Vector3Utils.magnitude(velocity);
+    if (speed < 0.1) return undefined;
+
+    const eye = {
+        x: pl.location.x,
+        y: pl.location.y + 1.6,
+        z: pl.location.z
+    };
+    const direction = {
+        x: velocity.x / speed,
+        y: velocity.y / speed,
+        z: velocity.z / speed
+    };
+
+    try {
+        const hit = pl.dimension.getBlockFromRay(eye, direction, {
+            maxDistance: config.GPWS_FORWARD_DIST,
+            includeLiquidBlocks: true,
+            includePassableBlocks: false
+        });
+        if (hit === undefined) return undefined;
+
+        const hitPoint = {
+            x: hit.block.location.x + hit.faceLocation.x,
+            y: hit.block.location.y + hit.faceLocation.y,
+            z: hit.block.location.z + hit.faceLocation.z
+        };
+        const distance = mcmath.Vector3Utils.distance(eye, hitPoint);
+        return distance < 0.5 ? undefined : distance;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+/**
+ * @param { mc.Player } pl
+ * @returns { GpwsWarning[] }
+ */
+export function getGpwsWarnings(pl) {
+    if (!pl.isGliding) return [];
+
+    const velocity = pl.getVelocity();
+    const altitude = calcAlt(pl);
+    /** @type { GpwsWarning[] } */
+    const warnings = [];
+
+    // 鞘翅耐久属于持续警告，不随起飞/接地阶段静默。
+    const elytraDamage = getDurabilityPercent(pl);
+    if (isNaN(elytraDamage) || elytraDamage >= config.AP_ETR_DAMAGE_MAX) {
+        warnings.push({ text: GPWS_CAUTION_ELYTRA_DAMAGE, alert: false });
+    }
+
+    // 刚起飞/爬升阶段不报 GPWS；VerticalSpeed 为正时不触发 STALL。
+    if (velocity.y > 0) return warnings;
+
+    // 最后进近/接地阶段：低高度且下降平缓时不报 GPWS。
+    if (altitude < config.GPWS_LANDING_ALT && velocity.y > -config.GPWS_LANDING_SINK) {
+        return warnings;
+    }
+
+    const forwardDistance = getForwardDistance(pl);
+
+    // 只有接近地面、下降率可能造成摔落伤害时才报 STALL。
+    const stall = pl.getRotation().x < -config.GPWS_STALL_PITCH
+        && altitude < config.GPWS_STALL_ALT
+        && velocity.y < -config.GPWS_STALL_SINK;
+
+    // 低高度下降由前向地形确认；前向障碍过近也直接 PULL UP。
+    const lowSinkPullUp = altitude < config.GPWS_PULL_UP_ALT
+        && velocity.y < -config.GPWS_PULL_UP_SINK
+        && forwardDistance !== undefined;
+    const obstaclePullUp = forwardDistance !== undefined
+        && forwardDistance < config.GPWS_FORWARD_ALERT;
+
+    // STALL 优先，避免 PULL UP 与 STALL 同时出现。
+    const pullUp = !stall && (lowSinkPullUp || obstaclePullUp);
+
+    if (pullUp) {
+        warnings.push({ text: GPWS_ALERT_PULL_UP, alert: true });
+    }
+    else if (stall) {
+        warnings.push({ text: GPWS_ALERT_STALL, alert: true });
+    }
+
+    if (!pullUp) {
+        if (velocity.y < -config.AP_SINK_RATE_MAX) {
+            warnings.push({ text: GPWS_CAUTION_SINK_RATE, alert: false });
+        }
+        if (forwardDistance !== undefined && forwardDistance < config.GPWS_FORWARD_CAUTION) {
+            warnings.push({ text: GPWS_CAUTION_TERRAIN_AHEAD, alert: false });
+        }
+        else if (altitude < config.AP_ALT_REQUIREMENT) {
+            warnings.push({ text: GPWS_CAUTION_TERRAIN, alert: false });
+        }
+    }
+
+    return warnings;
+}
+
+/**
+ * @param { mc.Player } pl
  * @returns { number }
  */
 export function getDurabilityPercent(pl) {
@@ -118,6 +240,11 @@ export function getConsoleText(data, pl) {
     const groundSpeed = mcmath.VectorXZUtils.magnitude(groundVelocity);
     /** @type { mc.VectorXZ } */
     const currentLoc = { x: pl.location.x, z: pl.location.z };
+    const gpwsWarnings = getGpwsWarnings(pl);
+    const gpwsLine = [
+        ...gpwsWarnings.filter(warning => warning.alert).map(warning => `§r§l§c${warning.text}`),
+        ...gpwsWarnings.filter(warning => !warning.alert).map(warning => `§r§l§e${warning.text}`)
+    ].join(' ');
     const txt = [
         '§r------',
         `§r§l${texts.CHOICE_TITLE}`,
@@ -140,6 +267,9 @@ export function getConsoleText(data, pl) {
         '§r------',
         `§r§lSpeed §r§a${speed.toFixed(2)}  §r§lGroundSpeed §r§a${groundSpeed.toFixed(2)}  §r§l${velocity.y < -config.AP_SINK_RATE_MAX ? '§c' : ''}VerticalVelocity §r§a${velocity.y.toFixed(2)}`,
         `§r§lAltitude §r§a${calcAlt(pl).toFixed(2)}  §r§lPitch §r§a${pl.getRotation().x.toFixed(2)}  §r§lYaw §r§a${pl.getRotation().y.toFixed(2)}  §r§l${isNaN(getDurabilityPercent(pl)) || (getDurabilityPercent(pl) >= config.AP_ETR_DAMAGE_MAX) ? '§c' : ''}ElytraDamage §r§a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? '' : '%'}`,
+        '§r------',
+        `§r§l${texts.GPWS_TITLE}`,
+        ...(gpwsLine ? [gpwsLine] : []),
         `§r------\n\n\n\n\n\n\n\n\n`
     ];
     return txt.join('\n');

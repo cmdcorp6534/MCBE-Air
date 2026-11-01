@@ -12,6 +12,7 @@
 - **快速补给**：一键获得鞘翅，或 64 个飞行时间 3 的烟花火箭。
 - **航点自动驾驶**：用命令设置水平航点，自动驾驶会持续把朝向修正到航点方向。
 - **飞行安全检查**：自动检查鞘翅耐久、滑翔状态、高度、下降率和与航点的距离，不满足时自动断开。
+- **EGPWS 注意与警告**：HUD 下方显示 `PULL UP`、`STALL`、`SINK RATE`、`TERRAIN AHEAD`、`TERRAIN`、`ELYTRA DAMAGE` 等警告；包含前向地形检测与鞘翅耐久监控。
 - **飞行 HUD**：ActionBar 显示速度、水平速度、垂直速度、高度、俯仰/偏航和鞘翅耐久。
 
 ## 环境要求
@@ -89,14 +90,41 @@
 
 | 条件 | 要求 | 不满足时的提示 |
 | --- | --- | --- |
-| 鞘翅 | 胸甲槽装备鞘翅，且耐久损耗低于 80% | 鞘翅损坏 |
+| 鞘翅 | 胸甲槽装备鞘翅，且耐久损耗低于 80% | GPWS `ELYTRA DAMAGE` |
 | 航点 | 已用 `/cmdcorp_air:wpt` 设置航点 | 未定义航点 |
 | 滑翔 | 正在使用鞘翅滑翔 | 未处于滑行状态 |
-| 高度 | 相对下方方块/液面至少 30 格 | 高度过低 |
-| 下降率 | 垂直速度不低于 -0.8 | 下降率过大 |
+| 高度 | 相对下方方块/液面至少 30 格；低于时触发 GPWS `TERRAIN` 系列 | GPWS |
+| 下降率 | 垂直速度不低于 -0.8；超过时触发 GPWS `SINK RATE` / `PULL UP` | GPWS |
 | 距离 | 距航点大于 50 格 | 已在航点附近 |
 
 > 自动驾驶不会自动降落。进入航点 50 格范围内后会自动断开，请自行控制落地。
+
+## 注意与警告（GPWS）
+
+HUD 最下方有一栏“注意与警告”。正常飞行时该栏为空；触发 Caution 或 Alert 时显示对应英文警告：
+
+| 警告 | 类型 | 触发条件 |
+| --- | --- | --- |
+| `PULL UP` | Alert（粗体红色） | 低高度下降且前向检测到地形（高度 < 30、下降 > 0.5 格/刻），或前方障碍距离 < 20 格 |
+| `STALL` | Alert（粗体红色） | 高度 < 30、下降速度 > 0.5 格/刻，且仰角超过 60°（`Pitch < -60`），即可能摔伤时 |
+| `SINK RATE` | Caution（粗体黄色） | 下降速度超过 0.8 格/刻（16 m/s），且没有 `PULL UP` |
+| `TERRAIN AHEAD` | Caution（粗体黄色） | 前向检测到 60 格内的地形/障碍，且没有 `PULL UP` |
+| `TERRAIN` | Caution（粗体黄色） | 高度低于 30 格，且没有 `PULL UP`、也不是前向地形警告 |
+| `ELYTRA DAMAGE` | Caution（粗体黄色） | 鞘翅耐久损耗达到 80%（`AP_ETR_DAMAGE_MAX`） |
+
+补充规则：
+
+- `VerticalSpeed > 0`（正在爬升）时不报 GPWS，避免刚起飞就报警，也避免 STALL 在爬升时误报；
+- 高度低于 30 格且下降速度小于 0.2 格/刻（4 m/s）时，视为最后进近/接地阶段，不报 GPWS；
+- `PULL UP` 显示时，不再同时显示 `SINK RATE`、`TERRAIN AHEAD` 和 `TERRAIN`；
+- `PULL UP` 与 `STALL` 不会同时出现，STALL 优先级更高；
+- `ELYTRA DAMAGE` 是持续警告，不受起飞/接地静默影响；
+- 前向检测沿玩家速度方向、从头部发射，最大 80 格；因此低高度 `PULL UP` 需要前向地形确认，可减少在虚空/开阔空域中的误报；
+- 警报合并为一行，Alert 在前、Caution 在后，例如 `STALL SINK RATE`。
+
+> 速度单位说明：Script API 的 `getVelocity()` 返回格/游戏刻（block/tick），Wiki 通常使用米/秒；换算为 1 格/刻 = 20 格/秒。`0.5 格/刻 ≈ 10 m/s`，`0.8 格/刻 = 16 m/s`，`1.0 格/刻 ≈ 20 m/s`。
+
+自动驾驶处于接通状态时，任意 Caution/Alert 都会断开 AP，禁用原因显示为 `GPWS`。当所有 Caution/Alert 解除后，如果 AP 原本处于接通状态，会自动恢复；如果仍存在其他禁用条件，则保持断开并显示对应原因。
 
 ## 飞行 HUD
 
@@ -109,7 +137,8 @@ ActionBar 会显示：
 - `VerticalVelocity`：垂直速度；
 - `Altitude`：相对下方方块/液面的高度；
 - `Pitch` / `Yaw`：俯仰角和偏航角；
-- `ElytraDamage`：鞘翅耐久损耗百分比。
+- `ElytraDamage`：鞘翅耐久损耗百分比；
+- “注意与警告”：GPWS Caution/Alert。
 
 ## 可调参数
 
@@ -118,9 +147,19 @@ ActionBar 会显示：
 | 参数 | 默认值 | 说明 |
 | --- | --- | --- |
 | `CHOICE_REMAIN_TICKS` | `60` | 菜单倒计时，60 tick = 3 秒 |
-| `AP_ALT_REQUIREMENT` | `30` | 自动驾驶最低高度 |
-| `AP_SINK_RATE_MAX` | `0.8` | 允许的最大下降速度 |
-| `AP_ETR_DAMAGE_MAX` | `80` | 鞘翅耐久损耗达到该百分比时禁用 AP |
+| `AP_ALT_REQUIREMENT` | `30` | 自动驾驶最低高度 / GPWS `TERRAIN` 阈值 |
+| `AP_SINK_RATE_MAX` | `0.8` | 允许的最大下降速度 / GPWS `SINK RATE` 阈值 |
+| `GPWS_PULL_UP_ALT` | `30` | `PULL UP` 高度阈值 |
+| `GPWS_PULL_UP_SINK` | `0.5` | `PULL UP` 下降速度阈值（格/刻，≈10 m/s） |
+| `GPWS_STALL_PITCH` | `60` | `STALL` 仰角阈值（度） |
+| `GPWS_STALL_ALT` | `30` | `STALL` 高度阈值 |
+| `GPWS_STALL_SINK` | `0.5` | `STALL` 下降速度阈值（格/刻，≈10 m/s） |
+| `GPWS_LANDING_ALT` | `30` | 进近/接地阶段高度阈值 |
+| `GPWS_LANDING_SINK` | `0.2` | 进近/接地阶段下降速度阈值（格/刻，4 m/s） |
+| `GPWS_FORWARD_DIST` | `80` | 前向检测最大距离（格） |
+| `GPWS_FORWARD_CAUTION` | `60` | `TERRAIN AHEAD` 警戒距离（格） |
+| `GPWS_FORWARD_ALERT` | `20` | 触发 `PULL UP` 的前向障碍距离（格） |
+| `AP_ETR_DAMAGE_MAX` | `80` | 鞘翅耐久损耗达到该百分比时触发 `ELYTRA DAMAGE` |
 | `AP_DISTANCE_REQUIREMENT` | `50` | 小于等于该距离时视为到达航点附近 |
 | `FW_DATA` | `3` | 发放的烟花飞行时间，范围 1–3 |
 

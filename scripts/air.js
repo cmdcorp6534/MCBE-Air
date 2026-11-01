@@ -3909,6 +3909,16 @@ var AP_SYSTEM = "AUTO_PILOT_DATA";
 var CHOICE_REMAIN_TICKS = 60;
 var AP_ALT_REQUIREMENT = 30;
 var AP_SINK_RATE_MAX = 0.8;
+var GPWS_PULL_UP_ALT = 30;
+var GPWS_PULL_UP_SINK = 0.5;
+var GPWS_STALL_PITCH = 60;
+var GPWS_STALL_ALT = 30;
+var GPWS_STALL_SINK = 0.5;
+var GPWS_LANDING_ALT = 30;
+var GPWS_LANDING_SINK = 0.2;
+var GPWS_FORWARD_DIST = 80;
+var GPWS_FORWARD_CAUTION = 60;
+var GPWS_FORWARD_ALERT = 20;
 var AP_ETR_DAMAGE_MAX = 80;
 var AP_DISTANCE_REQUIREMENT = 50;
 var FW_DATA = 3;
@@ -3922,6 +3932,7 @@ var STICK_LORE_LIST = [
 ];
 var CHOICE_TITLE = "\u9009\u9879";
 var AP_TITLE = "\u81EA\u52A8\u9A7E\u9A76";
+var GPWS_TITLE = "\u6CE8\u610F\u4E0E\u8B66\u544A";
 var AP_WP_UD = "\u8BF7\u7528 /cmdcorp_air:wpt \u5B9A\u4E49\u822A\u70B9";
 var AP_ON = "\u63A5\u901A";
 var AP_OFF = "\u65AD\u5F00";
@@ -3929,15 +3940,19 @@ var AP = "\u81EA\u52A8\u9A7E\u9A76";
 var ELY = "\u83B7\u5F97\u9798\u7FC5";
 var FWR = "\u83B7\u5F97\u70DF\u82B1\u706B\u7BAD";
 var EXIT = "\u5173\u95ED\u5E76\u91CD\u7F6E";
-var AP_DISABLE_DAMAGE = "\u9798\u7FC5\u635F\u574F";
 var AP_DISABLE_WP_UD = "\u672A\u5B9A\u4E49\u822A\u70B9";
-var AP_DISABLE_ALT_LOW = "\u9AD8\u5EA6\u8FC7\u4F4E";
-var AP_DISABLE_SINK_RATE = "\u4E0B\u964D\u7387\u8FC7\u5927";
 var AP_DISABLE_NOT_GLIDING = "\u672A\u5904\u4E8E\u6ED1\u7FD4\u72B6\u6001";
 var AP_DISABLE_APPROACH = "\u5DF2\u5728\u822A\u70B9\u9644\u8FD1";
 var WP_CMD_DESCRIPTION = "\u8BBE\u7F6E\u822A\u70B9";
 
 // development_behavior_packs/cmdcorp_Air/src/utils.js
+var GPWS_ALERT_PULL_UP = "PULL UP";
+var GPWS_ALERT_STALL = "STALL";
+var GPWS_CAUTION_SINK_RATE = "SINK RATE";
+var GPWS_CAUTION_TERRAIN = "TERRAIN";
+var GPWS_CAUTION_TERRAIN_AHEAD = "TERRAIN AHEAD";
+var GPWS_CAUTION_ELYTRA_DAMAGE = "ELYTRA DAMAGE";
+var GPWS_REASON = "GPWS";
 function calcDis(currentLoc, targetLoc) {
   return VectorXZUtils.distance(currentLoc, targetLoc);
 }
@@ -3953,7 +3968,8 @@ var defaultFlightConsole = () => {
     ap: {
       waypoint: void 0,
       status: false,
-      disableReason: void 0
+      disableReason: void 0,
+      gpwsRecover: false
     },
     choice: void 0
   };
@@ -3980,6 +3996,73 @@ function calcAlt(pl) {
   if (blockLocation === void 0) return playerLocation.y - pl.dimension.heightRange.min;
   return playerLocation.y - blockLocation.y;
 }
+function getForwardDistance(pl) {
+  const velocity = pl.getVelocity();
+  const speed = Vector3Utils.magnitude(velocity);
+  if (speed < 0.1) return void 0;
+  const eye = {
+    x: pl.location.x,
+    y: pl.location.y + 1.6,
+    z: pl.location.z
+  };
+  const direction = {
+    x: velocity.x / speed,
+    y: velocity.y / speed,
+    z: velocity.z / speed
+  };
+  try {
+    const hit = pl.dimension.getBlockFromRay(eye, direction, {
+      maxDistance: GPWS_FORWARD_DIST,
+      includeLiquidBlocks: true,
+      includePassableBlocks: false
+    });
+    if (hit === void 0) return void 0;
+    const hitPoint = {
+      x: hit.block.location.x + hit.faceLocation.x,
+      y: hit.block.location.y + hit.faceLocation.y,
+      z: hit.block.location.z + hit.faceLocation.z
+    };
+    const distance = Vector3Utils.distance(eye, hitPoint);
+    return distance < 0.5 ? void 0 : distance;
+  } catch {
+    return void 0;
+  }
+}
+function getGpwsWarnings(pl) {
+  if (!pl.isGliding) return [];
+  const velocity = pl.getVelocity();
+  const altitude = calcAlt(pl);
+  const warnings = [];
+  const elytraDamage = getDurabilityPercent(pl);
+  if (isNaN(elytraDamage) || elytraDamage >= AP_ETR_DAMAGE_MAX) {
+    warnings.push({ text: GPWS_CAUTION_ELYTRA_DAMAGE, alert: false });
+  }
+  if (velocity.y > 0) return warnings;
+  if (altitude < GPWS_LANDING_ALT && velocity.y > -GPWS_LANDING_SINK) {
+    return warnings;
+  }
+  const forwardDistance = getForwardDistance(pl);
+  const stall = pl.getRotation().x < -GPWS_STALL_PITCH && altitude < GPWS_STALL_ALT && velocity.y < -GPWS_STALL_SINK;
+  const lowSinkPullUp = altitude < GPWS_PULL_UP_ALT && velocity.y < -GPWS_PULL_UP_SINK && forwardDistance !== void 0;
+  const obstaclePullUp = forwardDistance !== void 0 && forwardDistance < GPWS_FORWARD_ALERT;
+  const pullUp = !stall && (lowSinkPullUp || obstaclePullUp);
+  if (pullUp) {
+    warnings.push({ text: GPWS_ALERT_PULL_UP, alert: true });
+  } else if (stall) {
+    warnings.push({ text: GPWS_ALERT_STALL, alert: true });
+  }
+  if (!pullUp) {
+    if (velocity.y < -AP_SINK_RATE_MAX) {
+      warnings.push({ text: GPWS_CAUTION_SINK_RATE, alert: false });
+    }
+    if (forwardDistance !== void 0 && forwardDistance < GPWS_FORWARD_CAUTION) {
+      warnings.push({ text: GPWS_CAUTION_TERRAIN_AHEAD, alert: false });
+    } else if (altitude < AP_ALT_REQUIREMENT) {
+      warnings.push({ text: GPWS_CAUTION_TERRAIN, alert: false });
+    }
+  }
+  return warnings;
+}
 function getDurabilityPercent(pl) {
   if (!pl.isValid) return NaN;
   const equippableComp = pl.getComponent(mc.EntityComponentTypes.Equippable);
@@ -3996,6 +4079,11 @@ function getConsoleText(data, pl) {
   const speed = Vector3Utils.magnitude(velocity);
   const groundSpeed = VectorXZUtils.magnitude(groundVelocity);
   const currentLoc = { x: pl.location.x, z: pl.location.z };
+  const gpwsWarnings = getGpwsWarnings(pl);
+  const gpwsLine = [
+    ...gpwsWarnings.filter((warning) => warning.alert).map((warning) => `\xA7r\xA7l\xA7c${warning.text}`),
+    ...gpwsWarnings.filter((warning) => !warning.alert).map((warning) => `\xA7r\xA7l\xA7e${warning.text}`)
+  ].join(" ");
   const txt = [
     "\xA7r------",
     `\xA7r\xA7l${CHOICE_TITLE}`,
@@ -4011,6 +4099,9 @@ function getConsoleText(data, pl) {
     "\xA7r------",
     `\xA7r\xA7lSpeed \xA7r\xA7a${speed.toFixed(2)}  \xA7r\xA7lGroundSpeed \xA7r\xA7a${groundSpeed.toFixed(2)}  \xA7r\xA7l${velocity.y < -AP_SINK_RATE_MAX ? "\xA7c" : ""}VerticalVelocity \xA7r\xA7a${velocity.y.toFixed(2)}`,
     `\xA7r\xA7lAltitude \xA7r\xA7a${calcAlt(pl).toFixed(2)}  \xA7r\xA7lPitch \xA7r\xA7a${pl.getRotation().x.toFixed(2)}  \xA7r\xA7lYaw \xA7r\xA7a${pl.getRotation().y.toFixed(2)}  \xA7r\xA7l${isNaN(getDurabilityPercent(pl)) || getDurabilityPercent(pl) >= AP_ETR_DAMAGE_MAX ? "\xA7c" : ""}ElytraDamage \xA7r\xA7a${getDurabilityPercent(pl).toFixed(2)}${isNaN(getDurabilityPercent(pl)) ? "" : "%"}`,
+    "\xA7r------",
+    `\xA7r\xA7l${GPWS_TITLE}`,
+    ...gpwsLine ? [gpwsLine] : [],
     `\xA7r------
 
 
@@ -4081,19 +4172,6 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
   }
 });
 (() => {
-  function showConsole() {
-    const players = mc2.world.getAllPlayers();
-    players.forEach((p) => {
-      const consoleData = getFlightConsole(p);
-      if (!consoleData) return;
-      const menu = getConsoleText(consoleData, p);
-      p.onScreenDisplay.setActionBar(menu);
-    });
-    mc2.system.run(showConsole);
-  }
-  mc2.system.run(showConsole);
-})();
-(() => {
   function executer() {
     const players = mc2.world.getAllPlayers();
     players.forEach((p) => {
@@ -4155,28 +4233,37 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
       const consoleData = getFlightConsole(p);
       if (!consoleData) return;
       const ap = consoleData.ap;
+      const gpwsWarnings = getGpwsWarnings(p);
+      if (gpwsWarnings.length > 0) {
+        if (ap.status) {
+          ap.status = false;
+          ap.gpwsRecover = true;
+        }
+        ap.disableReason = GPWS_REASON;
+        writeFlightConsole(p, consoleData);
+        return;
+      }
+      if (ap.disableReason === GPWS_REASON) {
+        ap.disableReason = void 0;
+        writeFlightConsole(p, consoleData);
+      }
+      if (ap.gpwsRecover) {
+        ap.gpwsRecover = false;
+        ap.status = true;
+        ap.disableReason = void 0;
+        writeFlightConsole(p, consoleData);
+      }
+      if (ap.disableReason === "\u9AD8\u5EA6\u8FC7\u4F4E" || ap.disableReason === "\u4E0B\u964D\u7387\u8FC7\u5927" || ap.disableReason === "\u9798\u7FC5\u635F\u574F") {
+        ap.disableReason = void 0;
+        writeFlightConsole(p, consoleData);
+      }
       const currentLoc = {
         x: p.location.x,
         z: p.location.z
       };
       if (ap.disableReason) {
-        if (ap.disableReason === AP_DISABLE_DAMAGE) {
-          if (!isNaN(getDurabilityPercent(p)) && getDurabilityPercent(p) < AP_ETR_DAMAGE_MAX) {
-            ap.disableReason = void 0;
-            writeFlightConsole(p, consoleData);
-          }
-        } else if (ap.disableReason === AP_DISABLE_NOT_GLIDING) {
+        if (ap.disableReason === AP_DISABLE_NOT_GLIDING) {
           if (p.isGliding) {
-            ap.disableReason = void 0;
-            writeFlightConsole(p, consoleData);
-          }
-        } else if (ap.disableReason === AP_DISABLE_SINK_RATE) {
-          if (p.getVelocity().y >= -AP_SINK_RATE_MAX) {
-            ap.disableReason = void 0;
-            writeFlightConsole(p, consoleData);
-          }
-        } else if (ap.disableReason === AP_DISABLE_ALT_LOW) {
-          if (calcAlt(p) >= AP_ALT_REQUIREMENT) {
             ap.disableReason = void 0;
             writeFlightConsole(p, consoleData);
           }
@@ -4193,23 +4280,8 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
           }
         }
       }
-      if (isNaN(getDurabilityPercent(p)) || getDurabilityPercent(p) >= AP_ETR_DAMAGE_MAX) {
-        ap.disableReason = AP_DISABLE_DAMAGE;
-        writeFlightConsole(p, consoleData);
-        return;
-      }
       if (!p.isGliding) {
         ap.disableReason = AP_DISABLE_NOT_GLIDING;
-        writeFlightConsole(p, consoleData);
-        return;
-      }
-      if (p.getVelocity().y < -AP_SINK_RATE_MAX) {
-        ap.disableReason = AP_DISABLE_SINK_RATE;
-        writeFlightConsole(p, consoleData);
-        return;
-      }
-      if (calcAlt(p) < AP_ALT_REQUIREMENT) {
-        ap.disableReason = AP_DISABLE_ALT_LOW;
         writeFlightConsole(p, consoleData);
         return;
       }
@@ -4271,6 +4343,19 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
     mc2.system.run(apNav);
   }
   mc2.system.run(apNav);
+})();
+(() => {
+  function showConsole() {
+    const players = mc2.world.getAllPlayers();
+    players.forEach((p) => {
+      const consoleData = getFlightConsole(p);
+      if (!consoleData) return;
+      const menu = getConsoleText(consoleData, p);
+      p.onScreenDisplay.setActionBar(menu);
+    });
+    mc2.system.run(showConsole);
+  }
+  mc2.system.run(showConsole);
 })();
 mc2.system.beforeEvents.startup.subscribe((eventData) => {
   eventData.customCommandRegistry.registerCommand(
