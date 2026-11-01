@@ -4258,79 +4258,25 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
       const consoleData = getFlightConsole(p);
       if (!consoleData) return;
       const ap = consoleData.ap;
-      const gpwsWarnings = getGpwsWarnings(p);
-      if (gpwsWarnings.length > 0) {
-        if (ap.status) {
-          ap.status = false;
-        }
+      if (getGpwsWarnings(p).length > 0) {
         ap.disableReason = GPWS_REASON;
-        writeFlightConsole(p, consoleData);
-        return;
-      }
-      if (ap.disableReason === GPWS_REASON) {
-        ap.disableReason = void 0;
-        writeFlightConsole(p, consoleData);
-      }
-      if (ap.disableReason === "\u9AD8\u5EA6\u8FC7\u4F4E" || ap.disableReason === "\u4E0B\u964D\u7387\u8FC7\u5927" || ap.disableReason === "\u9798\u7FC5\u635F\u574F") {
-        ap.disableReason = void 0;
-        writeFlightConsole(p, consoleData);
-      }
-      const currentLoc = {
-        x: p.location.x,
-        z: p.location.z
-      };
-      if (ap.disableReason) {
-        if (ap.disableReason === AP_DISABLE_NOT_GLIDING) {
-          if (p.isGliding) {
-            ap.disableReason = void 0;
-            writeFlightConsole(p, consoleData);
-          }
-        } else if (ap.disableReason === AP_DISABLE_WP_UD) {
-          if (ap.waypoint) {
-            ap.disableReason = void 0;
-            writeFlightConsole(p, consoleData);
-          }
-        } else if (ap.disableReason === AP_DISABLE_APPROACH) {
-          if (!ap.waypoint) return;
-          if (calcYaw(currentLoc, ap.waypoint) !== null) {
-            ap.disableReason = void 0;
-            writeFlightConsole(p, consoleData);
-          }
-        }
-      }
-      if (!p.isGliding) {
+      } else if (!p.isGliding) {
         ap.disableReason = AP_DISABLE_NOT_GLIDING;
-        writeFlightConsole(p, consoleData);
-        return;
-      }
-      if (!ap.waypoint) {
+      } else if (!ap.waypoint) {
         ap.disableReason = AP_DISABLE_WP_UD;
-        writeFlightConsole(p, consoleData);
-        return;
+      } else {
+        const currentLoc = {
+          x: p.location.x,
+          z: p.location.z
+        };
+        ap.disableReason = calcYaw(currentLoc, ap.waypoint) === null ? AP_DISABLE_APPROACH : void 0;
       }
-      if (calcYaw(currentLoc, ap.waypoint) === null) {
-        ap.disableReason = AP_DISABLE_APPROACH;
-        writeFlightConsole(p, consoleData);
-        return;
-      }
+      if (ap.disableReason && ap.status) ap.status = false;
+      writeFlightConsole(p, consoleData);
     });
     mc2.system.run(apCheck);
   }
   mc2.system.run(apCheck);
-})();
-(() => {
-  function apWatchDog() {
-    const players = mc2.world.getAllPlayers();
-    players.forEach((p) => {
-      const consoleData = getFlightConsole(p);
-      if (!consoleData) return;
-      const ap = consoleData.ap;
-      if (ap.disableReason && ap.status) ap.status = false;
-      writeFlightConsole(p, consoleData);
-    });
-    mc2.system.run(apWatchDog);
-  }
-  mc2.system.run(apWatchDog);
 })();
 (() => {
   function apNav() {

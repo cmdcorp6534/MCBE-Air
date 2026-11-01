@@ -142,86 +142,33 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
             if (!consoleData) return;
             const ap = consoleData.ap;
 
-            const gpwsWarnings = utils.getGpwsWarnings(p);
-            if (gpwsWarnings.length > 0) {
-                if (ap.status) {
-                    ap.status = false;
-                }
+            // 判定 disableReason，并统一落实 status 与写回。
+            if (utils.getGpwsWarnings(p).length > 0) {
                 ap.disableReason = utils.GPWS_REASON;
-                utils.writeFlightConsole(p, consoleData);
-                return;
             }
-            if (ap.disableReason === utils.GPWS_REASON) {
-                ap.disableReason = undefined;
-                utils.writeFlightConsole(p, consoleData);
-            }
-
-            // 清理旧版本遗留的 AP 禁用原因，避免升级后一直卡在旧状态。
-            if (ap.disableReason === '高度过低' || ap.disableReason === '下降率过大' || ap.disableReason === '鞘翅损坏') {
-                ap.disableReason = undefined;
-                utils.writeFlightConsole(p, consoleData);
-            }
-
-            /** @type { mc.VectorXZ } */
-            const currentLoc = {
-                x: p.location.x,
-                z: p.location.z
-            };
-            if (ap.disableReason) {
-                if (ap.disableReason === texts.AP_DISABLE_NOT_GLIDING) {
-                    if (p.isGliding) {
-                        ap.disableReason = undefined;
-                        utils.writeFlightConsole(p, consoleData);
-                    }
-                }
-                else if (ap.disableReason === texts.AP_DISABLE_WP_UD) {
-                    if (ap.waypoint) {
-                        ap.disableReason = undefined;
-                        utils.writeFlightConsole(p, consoleData);
-                    }
-                }
-                else if (ap.disableReason === texts.AP_DISABLE_APPROACH) {
-                    if (!ap.waypoint) return;
-                    if (utils.calcYaw(currentLoc, ap.waypoint) !== null) {
-                        ap.disableReason = undefined;
-                        utils.writeFlightConsole(p, consoleData);
-                    }
-                }
-            }
-            if (!p.isGliding) {
+            else if (!p.isGliding) {
                 ap.disableReason = texts.AP_DISABLE_NOT_GLIDING;
-                utils.writeFlightConsole(p, consoleData);
-                return;
             }
-            if (!ap.waypoint) {
+            else if (!ap.waypoint) {
                 ap.disableReason = texts.AP_DISABLE_WP_UD;
-                utils.writeFlightConsole(p, consoleData);
-                return;
             }
-            if (utils.calcYaw(currentLoc, ap.waypoint) === null) {
-                ap.disableReason = texts.AP_DISABLE_APPROACH;
-                utils.writeFlightConsole(p, consoleData);
-                return;
+            else {
+                /** @type { mc.VectorXZ } */
+                const currentLoc = {
+                    x: p.location.x,
+                    z: p.location.z
+                };
+                ap.disableReason = utils.calcYaw(currentLoc, ap.waypoint) === null
+                    ? texts.AP_DISABLE_APPROACH
+                    : undefined;
             }
+
+            if (ap.disableReason && ap.status) ap.status = false;
+            utils.writeFlightConsole(p, consoleData);
         });
         mc.system.run(apCheck);
     }
     mc.system.run(apCheck);
-})();
-
-(() => {
-    function apWatchDog() {
-        const players = mc.world.getAllPlayers();
-        players.forEach(p => {
-            const consoleData = utils.getFlightConsole(p);
-            if (!consoleData) return;
-            const ap = consoleData.ap;
-            if (ap.disableReason && ap.status) ap.status = false;
-            utils.writeFlightConsole(p, consoleData);
-        });
-        mc.system.run(apWatchDog);
-    }
-    mc.system.run(apWatchDog);
 })();
 
 (() => {
