@@ -4,19 +4,19 @@
         "name": "天空即为极限",
         "description": "天空即为极限 - 行为包",
         "uuid": "67ca5fc8-fd68-4771-80a1-a39ddba9bdc8",
-        "version": [ 1, 0, 3 ],
+        "version": [ 2, 0, 0 ],
         "min_engine_version": [ 1, 21, 0 ]
     },
     "modules": [
         {
             "type": "data",
             "uuid": "4c3321b9-7884-4176-a804-693b40dd673c",
-            "version": [ 1, 0, 3 ]
+            "version": [ 2, 0, 0 ]
         },
         {
             "type": "script",
             "uuid": "17a16c21-b068-4807-964b-5af401a21c4a",
-            "version": [ 1, 0, 3 ],
+            "version": [ 2, 0, 0 ],
             "entry": "scripts/air.js",
             "language": "javascript"
         }
