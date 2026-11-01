@@ -3912,8 +3912,6 @@ var AP_SINK_RATE_MAX = 0.8;
 var GPWS_PULL_UP_ALT = 30;
 var GPWS_PULL_UP_SINK = 0.5;
 var GPWS_STALL_PITCH = 60;
-var GPWS_STALL_ALT = 30;
-var GPWS_STALL_SINK = 0.5;
 var GPWS_LANDING_ALT = 30;
 var GPWS_LANDING_SINK = 0.2;
 var GPWS_FORWARD_DIST = 80;
@@ -3996,7 +3994,7 @@ function calcAlt(pl) {
   if (blockLocation === void 0) return playerLocation.y - pl.dimension.heightRange.min;
   return playerLocation.y - blockLocation.y;
 }
-function getForwardDistance(pl) {
+function getForwardHit(pl) {
   const velocity = pl.getVelocity();
   const speed = Vector3Utils.magnitude(velocity);
   if (speed < 0.1) return void 0;
@@ -4023,7 +4021,7 @@ function getForwardDistance(pl) {
       z: hit.block.location.z + hit.faceLocation.z
     };
     const distance = Vector3Utils.distance(eye, hitPoint);
-    return distance < 0.5 ? void 0 : distance;
+    return distance < 0.5 ? void 0 : { distance, face: hit.face };
   } catch {
     return void 0;
   }
@@ -4041,10 +4039,12 @@ function getGpwsWarnings(pl) {
   if (altitude < GPWS_LANDING_ALT && velocity.y > -GPWS_LANDING_SINK) {
     return warnings;
   }
-  const forwardDistance = getForwardDistance(pl);
-  const stall = pl.getRotation().x < -GPWS_STALL_PITCH && altitude < GPWS_STALL_ALT && velocity.y < -GPWS_STALL_SINK;
+  const forwardHit = getForwardHit(pl);
+  const forwardDistance = forwardHit?.distance;
+  const obstacleDistance = forwardHit !== void 0 && forwardHit.face !== mc.Direction.Up && forwardHit.face !== mc.Direction.Down ? forwardHit.distance : void 0;
+  const stall = pl.getRotation().x < -GPWS_STALL_PITCH;
   const lowSinkPullUp = altitude < GPWS_PULL_UP_ALT && velocity.y < -GPWS_PULL_UP_SINK && forwardDistance !== void 0;
-  const obstaclePullUp = forwardDistance !== void 0 && forwardDistance < GPWS_FORWARD_ALERT;
+  const obstaclePullUp = obstacleDistance !== void 0 && obstacleDistance < GPWS_FORWARD_ALERT;
   const pullUp = !stall && (lowSinkPullUp || obstaclePullUp);
   if (pullUp) {
     warnings.push({ text: GPWS_ALERT_PULL_UP, alert: true });
@@ -4055,7 +4055,7 @@ function getGpwsWarnings(pl) {
     if (velocity.y < -AP_SINK_RATE_MAX) {
       warnings.push({ text: GPWS_CAUTION_SINK_RATE, alert: false });
     }
-    if (forwardDistance !== void 0 && forwardDistance < GPWS_FORWARD_CAUTION) {
+    if (obstacleDistance !== void 0 && obstacleDistance < GPWS_FORWARD_CAUTION) {
       warnings.push({ text: GPWS_CAUTION_TERRAIN_AHEAD, alert: false });
     } else if (altitude < AP_ALT_REQUIREMENT) {
       warnings.push({ text: GPWS_CAUTION_TERRAIN, alert: false });

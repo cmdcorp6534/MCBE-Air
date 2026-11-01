@@ -106,10 +106,16 @@ export function calcAlt(pl) {
 }
 
 /**
- * @param { mc.Player } pl
- * @returns { number | undefined }
+ * @typedef { Object } ForwardHit
+ * @property { number } distance
+ * @property { mc.Direction } face
  */
-export function getForwardDistance(pl) {
+
+/**
+ * @param { mc.Player } pl
+ * @returns { ForwardHit | undefined }
+ */
+export function getForwardHit(pl) {
     const velocity = pl.getVelocity();
     const speed = mcmath.Vector3Utils.magnitude(velocity);
     if (speed < 0.1) return undefined;
@@ -139,7 +145,7 @@ export function getForwardDistance(pl) {
             z: hit.block.location.z + hit.faceLocation.z
         };
         const distance = mcmath.Vector3Utils.distance(eye, hitPoint);
-        return distance < 0.5 ? undefined : distance;
+        return distance < 0.5 ? undefined : { distance, face: hit.face };
     }
     catch {
         return undefined;
@@ -172,19 +178,24 @@ export function getGpwsWarnings(pl) {
         return warnings;
     }
 
-    const forwardDistance = getForwardDistance(pl);
+    const forwardHit = getForwardHit(pl);
+    const forwardDistance = forwardHit?.distance;
+    // 顶面/底面不算“前方障碍”，避免竖直俯冲时把地面误报成 TERRAIN AHEAD。
+    const obstacleDistance = (forwardHit !== undefined
+        && forwardHit.face !== mc.Direction.Up
+        && forwardHit.face !== mc.Direction.Down)
+        ? forwardHit.distance
+        : undefined;
 
-    // 只有接近地面、下降率可能造成摔落伤害时才报 STALL。
-    const stall = pl.getRotation().x < -config.GPWS_STALL_PITCH
-        && altitude < config.GPWS_STALL_ALT
-        && velocity.y < -config.GPWS_STALL_SINK;
+    // 高空也会报 STALL；爬升阶段已在上面提前返回。
+    const stall = pl.getRotation().x < -config.GPWS_STALL_PITCH;
 
     // 低高度下降由前向地形确认；前向障碍过近也直接 PULL UP。
     const lowSinkPullUp = altitude < config.GPWS_PULL_UP_ALT
         && velocity.y < -config.GPWS_PULL_UP_SINK
         && forwardDistance !== undefined;
-    const obstaclePullUp = forwardDistance !== undefined
-        && forwardDistance < config.GPWS_FORWARD_ALERT;
+    const obstaclePullUp = obstacleDistance !== undefined
+        && obstacleDistance < config.GPWS_FORWARD_ALERT;
 
     // STALL 优先，避免 PULL UP 与 STALL 同时出现。
     const pullUp = !stall && (lowSinkPullUp || obstaclePullUp);
@@ -200,7 +211,7 @@ export function getGpwsWarnings(pl) {
         if (velocity.y < -config.AP_SINK_RATE_MAX) {
             warnings.push({ text: GPWS_CAUTION_SINK_RATE, alert: false });
         }
-        if (forwardDistance !== undefined && forwardDistance < config.GPWS_FORWARD_CAUTION) {
+        if (obstacleDistance !== undefined && obstacleDistance < config.GPWS_FORWARD_CAUTION) {
             warnings.push({ text: GPWS_CAUTION_TERRAIN_AHEAD, alert: false });
         }
         else if (altitude < config.AP_ALT_REQUIREMENT) {
