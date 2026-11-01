@@ -105,7 +105,7 @@ HUD 最下方有一栏“注意与警告”。正常飞行时该栏为空；触�
 
 | 警告 | 类型 | 触发条件 |
 | --- | --- | --- |
-| `PULL UP` | Alert（粗体红色） | 低高度下降且前向检测到地形（高度 < 30、下降 > 0.5 格/刻），或前方侧面障碍距离 < 20 格且撞击速度足以造成动能伤害 |
+| `PULL UP` | Alert（粗体红色） | 低高度下降且前向检测到地形（高度 < 50、下降 > 0.5 格/刻），或前方侧面障碍距离 < 20 格且撞击速度足以造成动能伤害 |
 | `STALL` | Alert（粗体红色） | 非爬升、非接地阶段，仰角超过 60°（`Pitch < -60`）；高空也会报告 |
 | `SINK RATE` | Caution（粗体黄色） | 非爬升、非接地阶段，下降速度超过 0.8 格/刻（16 m/s），且没有 `PULL UP` |
 | `TERRAIN AHEAD` | Caution（粗体黄色） | 前向检测到 60 格内的侧面地形/障碍，且撞击速度足以造成动能伤害，并且没有 `PULL UP` |
@@ -159,7 +159,7 @@ ActionBar 会显示：
 | `CHOICE_REMAIN_TICKS` | `60` | 菜单倒计时，60 tick = 3 秒 |
 | `AP_ALT_REQUIREMENT` | `30` | 自动驾驶最低高度 / GPWS `TERRAIN` 阈值 |
 | `AP_SINK_RATE_MAX` | `0.8` | 允许的最大下降速度 / GPWS `SINK RATE` 阈值 |
-| `GPWS_PULL_UP_ALT` | `30` | `PULL UP` 高度阈值 |
+| `GPWS_PULL_UP_ALT` | `50` | `PULL UP` 高度阈值 |
 | `GPWS_PULL_UP_SINK` | `0.5` | `PULL UP` 下降速度阈值（格/刻，≈10 m/s） |
 | `GPWS_STALL_PITCH` | `60` | `STALL` 仰角阈值（度） |
 | `GPWS_LANDING_ALT` | `30` | 进近/接地阶段高度阈值 |
