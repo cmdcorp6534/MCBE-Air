@@ -1,16 +1,8 @@
 # Third-Party Notices
 
-## Project
-
-Copyright (C) 2026 cmdcorp6534
-
-The project is licensed under the GNU Affero General Public License v3.0
-(AGPL-3.0-only); see `LICENSE`.
-
-## Third-party components
-
-This project uses the following third-party components, which remain under
-their own licenses.
+This file lists third-party components used by 天空即为极限 (MCBE-Air) and the
+licenses that apply to them. The project's own license is kept separately in
+`LICENSE` and is not repeated here.
 
 ## Mojang AB packages
 
@@ -50,12 +42,3 @@ SOFTWARE.
 The MIT-licensed components are included in, or used by, the distributed pack;
 this notice is included with every distributed `.mcpack` to preserve the
 copyright and permission notice as required by the MIT License.
-
-## Corresponding source
-
-The source code for this project is available at:
-
-<https://github.com/cmdcorp6534/MCBE-Air>
-
-The repository contains the AGPL-licensed project source, the unminified
-`src/` files, and the build output in `scripts/air.js`.
