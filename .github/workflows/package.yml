@@ -60,14 +60,15 @@ jobs:
           mkdir -p "$RUNNER_TEMP/package/pack"
 
           # Ship only the runtime pack contents:
-          #   manifest.json, README.md, LICENSE, scripts/
+          #   manifest.json, README.md, LICENSE, THIRD_PARTY_NOTICES.md, scripts/
           # src/ is development source and must not be packaged.
-          cp manifest.json README.md LICENSE "$RUNNER_TEMP/package/pack/"
+          cp manifest.json README.md LICENSE THIRD_PARTY_NOTICES.md "$RUNNER_TEMP/package/pack/"
           cp -R scripts "$RUNNER_TEMP/package/pack/scripts"
 
           test -f "$RUNNER_TEMP/package/pack/manifest.json"
           test -f "$RUNNER_TEMP/package/pack/README.md"
           test -f "$RUNNER_TEMP/package/pack/LICENSE"
+          test -f "$RUNNER_TEMP/package/pack/THIRD_PARTY_NOTICES.md"
           test -f "$RUNNER_TEMP/package/pack/${{ steps.meta.outputs.entry }}"
           test -d "$RUNNER_TEMP/package/pack/scripts"
           test ! -e "$RUNNER_TEMP/package/pack/src"
@@ -87,6 +88,7 @@ jobs:
           unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "manifest.json"
           unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "README.md"
           unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "LICENSE"
+          unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "THIRD_PARTY_NOTICES.md"
           unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "${{ steps.meta.outputs.entry }}"
           if unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -q '^src/'; then
             echo "src/ must not be included in the mcpack" >&2

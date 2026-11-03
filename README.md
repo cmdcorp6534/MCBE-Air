@@ -188,7 +188,7 @@ GitHub Actions 的打包流程见 [`.github/workflows/package.yml`](.github/work
 - push 到 `main`：生成 Actions artifact；
 - push `v*` tag：生成 `.mcpack` 并上传到对应的 GitHub Release；
 - Workflow 不执行 esbuild，直接使用已提交的 `scripts/air.js`；
-- 打包内容只包含 `manifest.json`、`README.md`、`LICENSE` 和 `scripts/` 目录，`src/` 不会进入 mcpack。
+- 打包内容只包含 `manifest.json`、`README.md`、`LICENSE`、`THIRD_PARTY_NOTICES.md` 和 `scripts/` 目录，`src/` 不会进入 mcpack。
 
 发版示例：
 
@@ -203,7 +203,15 @@ git push origin v1.0.0
 
 ## 许可证
 
-本项目使用 [GNU Affero General Public License v3.0](LICENSE)。
+Copyright (C) 2026 cmdcorp6534
+
+本项目使用 [GNU Affero General Public License v3.0](LICENSE)（AGPL-3.0-only）。
+
+项目中使用的 Mojang AB 软件包（`@minecraft/server`、`@minecraft/vanilla-data`、`@minecraft/math`）按其 MIT License 授权。MIT 版权声明和许可文本已收录在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，并随 `.mcpack` 一起分发。
+
+对应源码：
+
+<https://github.com/cmdcorp6534/MCBE-Air>
 
 ## 鸣谢
 
@@ -213,3 +221,5 @@ git push origin v1.0.0
 ## 声明
 
 此 README 由人工智能生成，不保证与实际情况完全相符，具体情况请进入游戏体验。
+
+本项目与 Mojang Studios 或 Microsoft 没有隶属、赞助或认可关系。Minecraft 是 Mojang Synergies AB 的商标。
