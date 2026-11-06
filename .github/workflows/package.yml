@@ -59,25 +59,29 @@ jobs:
           rm -rf "$RUNNER_TEMP/package"
           mkdir -p "$RUNNER_TEMP/package/pack"
 
-          # Ship only the runtime pack contents:
-          #   manifest.json, README.md, LICENSE, THIRD_PARTY_NOTICES.md, scripts/
-          # src/ is development source and must not be packaged.
+          # Ship only the runtime pack contents. Keep an explicit allowlist so
+          # development files (src/, node_modules/, package*.json, .github/,
+          # tests, source maps, etc.) can never leak into the mcpack.
+          ENTRY="${{ steps.meta.outputs.entry }}"
+          mkdir -p "$RUNNER_TEMP/package/pack/$(dirname "$ENTRY")"
+
           cp manifest.json README.md LICENSE THIRD_PARTY_NOTICES.md "$RUNNER_TEMP/package/pack/"
-          cp -R scripts "$RUNNER_TEMP/package/pack/scripts"
+          cp "$ENTRY" "$RUNNER_TEMP/package/pack/$ENTRY"
 
           test -f "$RUNNER_TEMP/package/pack/manifest.json"
           test -f "$RUNNER_TEMP/package/pack/README.md"
           test -f "$RUNNER_TEMP/package/pack/LICENSE"
           test -f "$RUNNER_TEMP/package/pack/THIRD_PARTY_NOTICES.md"
-          test -f "$RUNNER_TEMP/package/pack/${{ steps.meta.outputs.entry }}"
-          test -d "$RUNNER_TEMP/package/pack/scripts"
+          test -f "$RUNNER_TEMP/package/pack/$ENTRY"
           test ! -e "$RUNNER_TEMP/package/pack/src"
+          test ! -e "$RUNNER_TEMP/package/pack/node_modules"
 
       - name: Create mcpack
         id: package
         shell: bash
         run: |
           set -euo pipefail
+          ENTRY="${{ steps.meta.outputs.entry }}"
           OUT="cmdcorp_Air-${{ steps.meta.outputs.release_version }}.mcpack"
 
           # An mcpack is a regular zip whose root is the behavior pack itself,
@@ -89,11 +93,22 @@ jobs:
           unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "README.md"
           unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "LICENSE"
           unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "THIRD_PARTY_NOTICES.md"
-          unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "${{ steps.meta.outputs.entry }}"
-          if unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -q '^src/'; then
-            echo "src/ must not be included in the mcpack" >&2
-            exit 1
-          fi
+          unzip -Z1 "$RUNNER_TEMP/package/$OUT" | grep -qx "$ENTRY"
+
+          # Reject anything that is not one of the explicitly allowed runtime
+          # files. Directory entries end with "/" and are ignored.
+          mapfile -t zip_entries < <(unzip -Z1 "$RUNNER_TEMP/package/$OUT")
+          for file in "${zip_entries[@]}"; do
+            [[ "$file" == */ || "$file" == "." || "$file" == "./" ]] && continue
+            case "$file" in
+              manifest.json|README.md|LICENSE|THIRD_PARTY_NOTICES.md|"$ENTRY") ;;
+              *)
+                echo "Unexpected file in mcpack: $file" >&2
+                exit 1
+                ;;
+            esac
+          done
+
           unzip -l "$RUNNER_TEMP/package/$OUT"
 
           echo "file=$RUNNER_TEMP/package/$OUT" >> "$GITHUB_OUTPUT"

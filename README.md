@@ -208,7 +208,8 @@ GitHub Actions 的打包流程见 [`.github/workflows/package.yml`](.github/work
 - push 到 `main`：生成 Actions artifact；
 - push `v*` tag：生成 `.mcpack` 并上传到对应的 GitHub Release；
 - Workflow 不执行 esbuild，直接使用已提交的 `scripts/air.js`；
-- 打包内容只包含 `manifest.json`、`README.md`、`LICENSE`、`THIRD_PARTY_NOTICES.md` 和 `scripts/` 目录，`src/` 不会进入 mcpack。
+- 打包时使用显式白名单，只允许 `manifest.json`、`README.md`、`LICENSE`、`THIRD_PARTY_NOTICES.md` 和 manifest 指定的脚本入口；出现其他文件会直接失败；
+- 打包内容只包含上述文件（当前脚本入口为 `scripts/air.js`）；`scripts/` 下的其他文件、`src/`、`node_modules/`、`package*.json` 等不会进入 mcpack。
 
 发版示例：
 
