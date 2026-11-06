@@ -21,3 +21,4 @@ export const AP_DISABLE_WP_UD = '未定义航点';
 export const AP_DISABLE_NOT_GLIDING = '未处于滑翔状态';
 export const AP_DISABLE_APPROACH = '已在航点附近';
 export const WP_CMD_DESCRIPTION = '设置航点';
+export const GET_STICK_CMD_DESCRIPTION = '获取飞行面板木棍';

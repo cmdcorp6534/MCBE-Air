@@ -3958,6 +3958,7 @@ var AP_DISABLE_WP_UD = "\u672A\u5B9A\u4E49\u822A\u70B9";
 var AP_DISABLE_NOT_GLIDING = "\u672A\u5904\u4E8E\u6ED1\u7FD4\u72B6\u6001";
 var AP_DISABLE_APPROACH = "\u5DF2\u5728\u822A\u70B9\u9644\u8FD1";
 var WP_CMD_DESCRIPTION = "\u8BBE\u7F6E\u822A\u70B9";
+var GET_STICK_CMD_DESCRIPTION = "\u83B7\u53D6\u98DE\u884C\u9762\u677F\u6728\u68CD";
 
 // src/utils.js
 var GPWS_ALERT_PULL_UP = "PULL UP";
@@ -4159,26 +4160,9 @@ var isFlightStick = (itemStack) => itemStack?.typeId === MinecraftItemTypes.Stic
 var stick = () => {
   const stk = new mc2.ItemStack(MinecraftItemTypes.Stick, 1);
   stk.nameTag = STICK_NAME;
-  stk.lockMode = mc2.ItemLockMode.slot;
   stk.setLore(STICK_LORE_LIST);
   return stk;
 };
-(() => {
-  function setStick() {
-    const players = mc2.world.getAllPlayers();
-    players.forEach((p) => {
-      if (!p?.isValid) return;
-      const inventoryComp = p.getComponent(mc2.EntityComponentTypes.Inventory);
-      if (!inventoryComp?.isValid) return;
-      const containerComp = inventoryComp.container;
-      if (!containerComp?.isValid) return;
-      const firstHotbar = containerComp.getItem(0);
-      if (!isFlightStick(firstHotbar)) containerComp.setItem(0, stick());
-    });
-    mc2.system.run(setStick);
-  }
-  mc2.system.run(setStick);
-})();
 mc2.world.afterEvents.itemUse.subscribe((eventData) => {
   const { source, itemStack } = eventData;
   if (!isFlightStick(itemStack)) return;
@@ -4335,6 +4319,8 @@ mc2.world.afterEvents.itemUse.subscribe((eventData) => {
   mc2.system.run(showConsole);
 })();
 mc2.system.beforeEvents.startup.subscribe((eventData) => {
+  const sourceError = new Error("This command should be runned by a valid player");
+  sourceError.name = "SourceError";
   eventData.customCommandRegistry.registerCommand(
     {
       cheatsRequired: false,
@@ -4353,8 +4339,6 @@ mc2.system.beforeEvents.startup.subscribe((eventData) => {
       permissionLevel: mc2.CommandPermissionLevel.Any
     },
     (commandOrigin, ...args) => {
-      const sourceError = new Error("This command should be runned by a valid player");
-      sourceError.name = "SourceError";
       const sysNotStartError = new Error("Start AP System first");
       sysNotStartError.name = "SystemNotStartedError";
       try {
@@ -4370,6 +4354,34 @@ mc2.system.beforeEvents.startup.subscribe((eventData) => {
         writeFlightConsole(sourceEntity, consoleData);
         return {
           message: "Waypoint was set",
+          status: mc2.CustomCommandStatus.Success
+        };
+      } catch (err) {
+        const e = err instanceof Error ? `${err.name}: ${err.message}` : `${String(err)}`;
+        return {
+          message: e,
+          status: mc2.CustomCommandStatus.Failure
+        };
+      }
+    }
+  );
+  eventData.customCommandRegistry.registerCommand(
+    {
+      cheatsRequired: false,
+      description: GET_STICK_CMD_DESCRIPTION,
+      name: "cmdcorp_air:airstick",
+      permissionLevel: mc2.CommandPermissionLevel.Any
+    },
+    (commandOrigin) => {
+      try {
+        const { sourceEntity } = commandOrigin;
+        if (!(sourceEntity instanceof mc2.Player)) throw sourceError;
+        if (!sourceEntity.isValid) throw sourceError;
+        mc2.system.run(() => {
+          sourceEntity.addItem(stick());
+        });
+        return {
+          message: "Tried to add an air stick",
           status: mc2.CustomCommandStatus.Success
         };
       } catch (err) {

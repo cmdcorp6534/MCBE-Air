@@ -18,11 +18,12 @@ const isFlightStick = (itemStack) =>
 const stick = () => {
     const stk = new mc.ItemStack(vanilla.MinecraftItemTypes.Stick, 1);
     stk.nameTag = texts.STICK_NAME;
-    stk.lockMode = mc.ItemLockMode.slot;
+    // stk.lockMode = mc.ItemLockMode.slot;
     stk.setLore(texts.STICK_LORE_LIST);
     return stk;
 }
 
+/*
 (() => {
     function setStick() {
         const players = mc.world.getAllPlayers();
@@ -39,6 +40,7 @@ const stick = () => {
     }
     mc.system.run(setStick);
 })();
+*/
 
 mc.world.afterEvents.itemUse.subscribe(eventData => {
     const { source, itemStack } = eventData;
@@ -218,6 +220,8 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
 })();
 
 mc.system.beforeEvents.startup.subscribe(eventData => {
+    const sourceError = new Error('This command should be runned by a valid player');
+    sourceError.name = 'SourceError';
     eventData.customCommandRegistry.registerCommand(
         {
             cheatsRequired: false,
@@ -236,8 +240,6 @@ mc.system.beforeEvents.startup.subscribe(eventData => {
             permissionLevel: mc.CommandPermissionLevel.Any
         },
         (commandOrigin, ...args) => {
-            const sourceError = new Error('This command should be runned by a valid player');
-            sourceError.name = 'SourceError';
             const sysNotStartError = new Error('Start AP System first');
             sysNotStartError.name = 'SystemNotStartedError';
             try {
@@ -255,6 +257,35 @@ mc.system.beforeEvents.startup.subscribe(eventData => {
                     message: 'Waypoint was set',
                     status: mc.CustomCommandStatus.Success
                 }
+            }
+            catch (err) {
+                const e = err instanceof Error
+                    ? `${err.name}: ${err.message}`
+                    : `${String(err)}`;
+                return {
+                    message: e,
+                    status: mc.CustomCommandStatus.Failure
+                };
+            }
+        }
+    );
+    eventData.customCommandRegistry.registerCommand(
+        {
+            cheatsRequired: false,
+            description: texts.GET_STICK_CMD_DESCRIPTION,
+            name: 'cmdcorp_air:airstick',
+            permissionLevel: mc.CommandPermissionLevel.Any
+        },
+        commandOrigin => {
+            try {
+                const { sourceEntity } = commandOrigin;
+                if (!(sourceEntity instanceof mc.Player)) throw sourceError;
+                if (!sourceEntity.isValid) throw sourceError;
+                mc.system.run(() => { sourceEntity.addItem(stick()) });
+                return {
+                    message: 'Tried to add an air stick',
+                    status: mc.CustomCommandStatus.Success
+                };
             }
             catch (err) {
                 const e = err instanceof Error
