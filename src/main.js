@@ -18,29 +18,9 @@ const isFlightStick = (itemStack) =>
 const stick = () => {
     const stk = new mc.ItemStack(vanilla.MinecraftItemTypes.Stick, 1);
     stk.nameTag = texts.STICK_NAME;
-    // stk.lockMode = mc.ItemLockMode.slot;
     stk.setLore(texts.STICK_LORE_LIST);
     return stk;
 }
-
-/*
-(() => {
-    function setStick() {
-        const players = mc.world.getAllPlayers();
-        players.forEach(p => {
-            if (!p?.isValid) return;
-            const inventoryComp = p.getComponent(mc.EntityComponentTypes.Inventory);
-            if (!inventoryComp?.isValid) return;
-            const containerComp = inventoryComp.container;
-            if (!containerComp?.isValid) return;
-            const firstHotbar = containerComp.getItem(0);
-            if (!isFlightStick(firstHotbar)) containerComp.setItem(0, stick());
-        });
-        mc.system.run(setStick);
-    }
-    mc.system.run(setStick);
-})();
-*/
 
 mc.world.afterEvents.itemUse.subscribe(eventData => {
     const { source, itemStack } = eventData;
