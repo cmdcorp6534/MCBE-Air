@@ -1,4 +1,4 @@
-// development_behavior_packs/cmdcorp_Air/src/main.js
+// src/main.js
 import * as mc2 from "@minecraft/server";
 
 // node_modules/@minecraft/vanilla-data/lib/index.js
@@ -42,6 +42,7 @@ var MinecraftBiomeTypes = ((MinecraftBiomeTypes2) => {
   MinecraftBiomeTypes2["FrozenRiver"] = "minecraft:frozen_river";
   MinecraftBiomeTypes2["Grove"] = "minecraft:grove";
   MinecraftBiomeTypes2["Hell"] = "minecraft:hell";
+  MinecraftBiomeTypes2["IceCaves"] = "minecraft:ice_caves";
   MinecraftBiomeTypes2["IceMountains"] = "minecraft:ice_mountains";
   MinecraftBiomeTypes2["IcePlains"] = "minecraft:ice_plains";
   MinecraftBiomeTypes2["IcePlainsSpikes"] = "minecraft:ice_plains_spikes";
@@ -494,6 +495,7 @@ var MinecraftBlockTypes = ((MinecraftBlockTypes2) => {
   MinecraftBlockTypes2["DioriteWall"] = "minecraft:diorite_wall";
   MinecraftBlockTypes2["Dirt"] = "minecraft:dirt";
   MinecraftBlockTypes2["DirtWithRoots"] = "minecraft:dirt_with_roots";
+  MinecraftBlockTypes2["DiscPress"] = "minecraft:disc_press";
   MinecraftBlockTypes2["Dispenser"] = "minecraft:dispenser";
   MinecraftBlockTypes2["DoubleCutCopperSlab"] = "minecraft:double_cut_copper_slab";
   MinecraftBlockTypes2["DragonEgg"] = "minecraft:dragon_egg";
@@ -769,6 +771,8 @@ var MinecraftBlockTypes = ((MinecraftBlockTypes2) => {
   MinecraftBlockTypes2["HornCoralFan"] = "minecraft:horn_coral_fan";
   MinecraftBlockTypes2["HornCoralWallFan"] = "minecraft:horn_coral_wall_fan";
   MinecraftBlockTypes2["Ice"] = "minecraft:ice";
+  MinecraftBlockTypes2["IceCrystal"] = "minecraft:ice_crystal";
+  MinecraftBlockTypes2["Icicle"] = "minecraft:icicle";
   MinecraftBlockTypes2["InfestedChiseledStoneBricks"] = "minecraft:infested_chiseled_stone_bricks";
   MinecraftBlockTypes2["InfestedCobblestone"] = "minecraft:infested_cobblestone";
   MinecraftBlockTypes2["InfestedCrackedStoneBricks"] = "minecraft:infested_cracked_stone_bricks";
@@ -1594,6 +1598,7 @@ var MinecraftEffectTypes = ((MinecraftEffectTypes2) => {
   MinecraftEffectTypes2["Darkness"] = "minecraft:darkness";
   MinecraftEffectTypes2["FatalPoison"] = "minecraft:fatal_poison";
   MinecraftEffectTypes2["FireResistance"] = "minecraft:fire_resistance";
+  MinecraftEffectTypes2["Freezing"] = "minecraft:freezing";
   MinecraftEffectTypes2["Haste"] = "minecraft:haste";
   MinecraftEffectTypes2["HealthBoost"] = "minecraft:health_boost";
   MinecraftEffectTypes2["Hunger"] = "minecraft:hunger";
@@ -1717,6 +1722,7 @@ var MinecraftEntityTypes = ((MinecraftEntityTypes2) => {
   MinecraftEntityTypes2["FishingHook"] = "minecraft:fishing_hook";
   MinecraftEntityTypes2["Fox"] = "minecraft:fox";
   MinecraftEntityTypes2["Frog"] = "minecraft:frog";
+  MinecraftEntityTypes2["Frostbite"] = "minecraft:frostbite";
   MinecraftEntityTypes2["Ghast"] = "minecraft:ghast";
   MinecraftEntityTypes2["GlowSquid"] = "minecraft:glow_squid";
   MinecraftEntityTypes2["Goat"] = "minecraft:goat";
@@ -1726,6 +1732,7 @@ var MinecraftEntityTypes = ((MinecraftEntityTypes2) => {
   MinecraftEntityTypes2["HopperMinecart"] = "minecraft:hopper_minecart";
   MinecraftEntityTypes2["Horse"] = "minecraft:horse";
   MinecraftEntityTypes2["Husk"] = "minecraft:husk";
+  MinecraftEntityTypes2["IceBall"] = "minecraft:ice_ball";
   MinecraftEntityTypes2["IronGolem"] = "minecraft:iron_golem";
   MinecraftEntityTypes2["LightningBolt"] = "minecraft:lightning_bolt";
   MinecraftEntityTypes2["LingeringPotion"] = "minecraft:lingering_potion";
@@ -2391,6 +2398,7 @@ var MinecraftItemTypes = ((MinecraftItemTypes2) => {
   MinecraftItemTypes2["FriendPotterySherd"] = "minecraft:friend_pottery_sherd";
   MinecraftItemTypes2["FrogSpawn"] = "minecraft:frog_spawn";
   MinecraftItemTypes2["FrogSpawnEgg"] = "minecraft:frog_spawn_egg";
+  MinecraftItemTypes2["FrostbiteSpawnEgg"] = "minecraft:frostbite_spawn_egg";
   MinecraftItemTypes2["FrostedIce"] = "minecraft:frosted_ice";
   MinecraftItemTypes2["Furnace"] = "minecraft:furnace";
   MinecraftItemTypes2["GhastSpawnEgg"] = "minecraft:ghast_spawn_egg";
@@ -2502,6 +2510,9 @@ var MinecraftItemTypes = ((MinecraftItemTypes2) => {
   MinecraftItemTypes2["HowlPotterySherd"] = "minecraft:howl_pottery_sherd";
   MinecraftItemTypes2["HuskSpawnEgg"] = "minecraft:husk_spawn_egg";
   MinecraftItemTypes2["Ice"] = "minecraft:ice";
+  MinecraftItemTypes2["IceBall"] = "minecraft:ice_ball";
+  MinecraftItemTypes2["IceCrystal"] = "minecraft:ice_crystal";
+  MinecraftItemTypes2["Icicle"] = "minecraft:icicle";
   MinecraftItemTypes2["InfestedChiseledStoneBricks"] = "minecraft:infested_chiseled_stone_bricks";
   MinecraftItemTypes2["InfestedCobblestone"] = "minecraft:infested_cobblestone";
   MinecraftItemTypes2["InfestedCrackedStoneBricks"] = "minecraft:infested_cracked_stone_bricks";
@@ -3465,12 +3476,14 @@ var MinecraftPotionDeliveryTypes = ((MinecraftPotionDeliveryTypes2) => {
 var MinecraftPotionEffectTypes = ((MinecraftPotionEffectTypes2) => {
   MinecraftPotionEffectTypes2["Awkward"] = "minecraft:awkward";
   MinecraftPotionEffectTypes2["FireResistance"] = "minecraft:fire_resistance";
+  MinecraftPotionEffectTypes2["Freezing"] = "minecraft:freezing";
   MinecraftPotionEffectTypes2["Harming"] = "minecraft:harming";
   MinecraftPotionEffectTypes2["Healing"] = "minecraft:healing";
   MinecraftPotionEffectTypes2["Infested"] = "minecraft:infested";
   MinecraftPotionEffectTypes2["Invisibility"] = "minecraft:invisibility";
   MinecraftPotionEffectTypes2["Leaping"] = "minecraft:leaping";
   MinecraftPotionEffectTypes2["LongFireResistance"] = "minecraft:long_fire_resistance";
+  MinecraftPotionEffectTypes2["LongFreezing"] = "minecraft:long_freezing";
   MinecraftPotionEffectTypes2["LongInvisibility"] = "minecraft:long_invisibility";
   MinecraftPotionEffectTypes2["LongLeaping"] = "minecraft:long_leaping";
   MinecraftPotionEffectTypes2["LongMundane"] = "minecraft:long_mundane";
@@ -3513,7 +3526,7 @@ var MinecraftPotionEffectTypes = ((MinecraftPotionEffectTypes2) => {
   return MinecraftPotionEffectTypes2;
 })(MinecraftPotionEffectTypes || {});
 
-// development_behavior_packs/cmdcorp_Air/src/utils.js
+// src/utils.js
 import * as mc from "@minecraft/server";
 
 // node_modules/@minecraft/math/lib/src/general/clamp.js
@@ -3904,7 +3917,7 @@ var Colors = {
 // node_modules/@minecraft/math/lib/src/aabb/coreHelpers.js
 import { BlockVolume } from "@minecraft/server";
 
-// development_behavior_packs/cmdcorp_Air/src/config.js
+// src/config.js
 var AP_SYSTEM = "AUTO_PILOT_DATA";
 var CHOICE_REMAIN_TICKS = 60;
 var AP_ALT_REQUIREMENT = 30;
@@ -3924,7 +3937,7 @@ var AP_ETR_DAMAGE_MAX = 80;
 var AP_DISTANCE_REQUIREMENT = 50;
 var FW_DATA = 3;
 
-// development_behavior_packs/cmdcorp_Air/src/texts.js
+// src/texts.js
 var STICK_NAME = "\u98DE\u884C\u9762\u677F";
 var STICK_LORE_LIST = [
   "\u4F7F\u7528\u6B64\u7269\u54C1\u6253\u5F00\u98DE\u884C\u9762\u677F",
@@ -3946,7 +3959,7 @@ var AP_DISABLE_NOT_GLIDING = "\u672A\u5904\u4E8E\u6ED1\u7FD4\u72B6\u6001";
 var AP_DISABLE_APPROACH = "\u5DF2\u5728\u822A\u70B9\u9644\u8FD1";
 var WP_CMD_DESCRIPTION = "\u8BBE\u7F6E\u822A\u70B9";
 
-// development_behavior_packs/cmdcorp_Air/src/utils.js
+// src/utils.js
 var GPWS_ALERT_PULL_UP = "PULL UP";
 var GPWS_ALERT_STALL = "STALL";
 var GPWS_CAUTION_SINK_RATE = "SINK RATE";
@@ -4141,7 +4154,7 @@ function getConsoleText(data, pl) {
   return txt.join("\n");
 }
 
-// development_behavior_packs/cmdcorp_Air/src/main.js
+// src/main.js
 var isFlightStick = (itemStack) => itemStack?.typeId === MinecraftItemTypes.Stick && itemStack?.nameTag === STICK_NAME;
 var stick = () => {
   const stk = new mc2.ItemStack(MinecraftItemTypes.Stick, 1);

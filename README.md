@@ -180,8 +180,28 @@ ActionBar 会显示：
 ## 开发与构建
 
 - `src/` 是源码，[`scripts/air.js`](scripts/air.js) 是已经打包好的脚本，也是 `manifest.json` 的入口。
-- 仓库目前没有提交 `package.json` / 构建脚本；修改 `src/` 后，需要用 esbuild 重新生成 `scripts/air.js`（`@minecraft/server` 作为 external，`@minecraft/math` 和 `@minecraft/vanilla-data` 可以一起打包）。
-- 提交前确认 `scripts/air.js` 已更新，否则游戏和 Release 里运行的仍是旧代码。
+- 构建依赖记录在 [`package.json`](package.json) 和 `package-lock.json` 中；需要 Node.js 18+。
+- 首次安装依赖：
+
+```bash
+npm ci
+```
+
+- 单次构建：
+
+```bash
+npm run build
+```
+
+- 开发监听：
+
+```bash
+npm run watch
+```
+
+构建使用 esbuild，将 `@minecraft/server` 作为 external，`@minecraft/math` 和 `@minecraft/vanilla-data` 一起打包进 `scripts/air.js`。
+
+`node_modules/` 已加入 [`.gitignore`](.gitignore)，不要提交。提交前确认 `scripts/air.js` 已更新，否则游戏和 Release 里运行的仍是旧代码。
 
 GitHub Actions 的打包流程见 [`.github/workflows/package.yml`](.github/workflows/package.yml)：
 
