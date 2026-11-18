@@ -1,16 +1,29 @@
 {
-  "license": "AGPL-3.0-only",
-  "scripts": {
-    "build": "esbuild src/main.js --bundle --format=esm --external:@minecraft/server --outfile=scripts/air.js",
-    "watch": "esbuild src/main.js --bundle --format=esm --external:@minecraft/server --outfile=scripts/air.js --watch"
+  "name": "cmdcorp_air",
+  "version": "3.0.0",
+  "description": "天空即为极限 - 行为包",
+  "homepage": "https://github.com/cmdcorp6534/MCBE-Air#readme",
+  "bugs": {
+    "url": "https://github.com/cmdcorp6534/MCBE-Air/issues"
   },
-  "dependencies": {
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cmdcorp6534/MCBE-Air.git"
+  },
+  "license": "AGPL-3.0-only",
+  "author": "cmdcorp6534",
+  "type": "module",
+  "main": "scripts/main.js",
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('scripts', { recursive: true, force: true })\"",
+    "check": "tsc -p . --noEmit",
+    "build": "npm run clean && tsc -p .",
+    "watch": "tsc -p . --watch --preserveWatchOutput"
+  },
+  "devDependencies": {
     "@minecraft/math": "^2.4.1",
     "@minecraft/server": "^2.11.0",
     "@minecraft/vanilla-data": "^1.26.60",
-    "esbuild": "^0.28.2"
-  },
-  "allowScripts": {
-    "esbuild@0.28.2": true
+    "typescript": "^7.0.2"
   }
 }

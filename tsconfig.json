@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "es2020",
+    "moduleResolution": "node",
+
+    "rootDir": "src",
+    "outDir": "scripts",
+
+    "strict": true,
+    "noEmitOnError": true,
+
+    "sourceMap": true,
+    "inlineSources": true,
+
+    "skipLibCheck": true,
+
+    "pretty": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "scripts"]
+}
