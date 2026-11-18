@@ -1,6 +1,3 @@
-// @ts-check
-'use strict';
-
 import * as mc from '@minecraft/server';
 import * as vanilla from '@minecraft/vanilla-data';
 import * as mcmath from '@minecraft/math';
@@ -15,21 +12,11 @@ export const GPWS_CAUTION_TERRAIN_AHEAD = 'TERRAIN AHEAD';
 export const GPWS_CAUTION_ELYTRA_DAMAGE = 'ELYTRA DAMAGE';
 export const GPWS_REASON = 'GPWS';
 
-/**
- * @param { mc.VectorXZ } currentLoc
- * @param { mc.VectorXZ } targetLoc
- * @returns { number }
- */
-export function calcDis(currentLoc, targetLoc) {
+export function calcDis(currentLoc: mc.VectorXZ, targetLoc: mc.VectorXZ): number {
     return mcmath.VectorXZUtils.distance(currentLoc, targetLoc);
 }
 
-/**
- * @param { mc.VectorXZ } currentLoc
- * @param { mc.VectorXZ } targetLoc
- * @returns { number | null } - Yaw but not pitch
- */
-export function calcYaw(currentLoc, targetLoc) {
+export function calcYaw(currentLoc: mc.VectorXZ, targetLoc: mc.VectorXZ): number | null {
     const dir = mcmath.VectorXZUtils.subtract(targetLoc, currentLoc);
     if (mcmath.VectorXZUtils.magnitude(dir) <= config.AP_DISTANCE_REQUIREMENT) return null;
     const rawYaw = Math.atan2(-dir.x, dir.z) * (180 / Math.PI);
@@ -37,31 +24,28 @@ export function calcYaw(currentLoc, targetLoc) {
     return normalizedYaw;
 }
 
-/**
- * @typedef { Object } AutoPilot
- * @property { mc.VectorXZ | undefined } waypoint
- * @property { boolean } status
- * @property { string | undefined } disableReason
- */
-/**
- * @typedef { Object } Choice
- * @property { number } id
- * @property { number } remains
- */
-/**
- * @typedef { Object } FlightConsole
- * @property { AutoPilot } ap
- * @property { Choice | undefined } choice
- */
+export interface AutoPilot {
+    waypoint: mc.VectorXZ | undefined;
+    status: boolean;
+    disableReason: string | undefined;
+}
 
-/**
- * @typedef { Object } GpwsWarning
- * @property { string } text
- * @property { boolean } alert
- */
+export interface Choice {
+    id: number;
+    remains: number;
+}
 
-/** @returns { FlightConsole } */
-export const defaultFlightConsole = () => {
+export interface FlightConsole {
+    ap: AutoPilot;
+    choice: Choice | undefined;
+}
+
+export interface GpwsWarning {
+    text: string;
+    alert: boolean;
+}
+
+export const defaultFlightConsole = (): FlightConsole => {
     return {
         ap: {
             waypoint: undefined,
@@ -72,58 +56,41 @@ export const defaultFlightConsole = () => {
     };
 }
 
-/**
- * @param { mc.Player } pl
- * @param { FlightConsole | undefined } data
- */
-export function writeFlightConsole(pl, data) {
+export function writeFlightConsole(pl: mc.Player, data: FlightConsole | undefined): void {
     const playerDataString = JSON.stringify(data);
     pl.setDynamicProperty(config.AP_SYSTEM, playerDataString);
 }
 
-/**
- * @param { mc.Player } pl
- * @returns { FlightConsole | undefined }
- */
-export function getFlightConsole(pl) {
+export function getFlightConsole(pl: mc.Player): FlightConsole | undefined {
     const playerDataString = pl.getDynamicProperty(config.AP_SYSTEM);
     if (typeof playerDataString !== 'string') return undefined;
-    try { return /** @type { FlightConsole } */ (JSON.parse(playerDataString))}
-    catch { return undefined }
+    try { return JSON.parse(playerDataString) as FlightConsole; }
+    catch { return undefined; }
 }
 
-/**
- * @param { mc.Player } pl
- * @returns { number }
- */
-export function calcAlt(pl) {
+export function calcAlt(pl: mc.Player): number {
     const playerLocation = pl.location;
     const blockLocation = pl.dimension.getBlockBelow(playerLocation, { includeLiquidBlocks: true })?.location;
     if (blockLocation === undefined) return playerLocation.y - pl.dimension.heightRange.min;
     return playerLocation.y - blockLocation.y;
 }
 
-/**
- * @typedef { Object } ForwardHit
- * @property { number } distance
- * @property { mc.Direction } face
- */
+export interface ForwardHit {
+    distance: number;
+    face: mc.Direction;
+}
 
-/**
- * @param { mc.Player } pl
- * @returns { ForwardHit | undefined }
- */
-export function getForwardHit(pl) {
+export function getForwardHit(pl: mc.Player): ForwardHit | undefined {
     const velocity = pl.getVelocity();
     const speed = mcmath.Vector3Utils.magnitude(velocity);
     if (speed < 0.1) return undefined;
 
-    const eye = {
+    const eye: mc.Vector3 = {
         x: pl.location.x,
         y: pl.location.y + 1.6,
         z: pl.location.z
     };
-    const direction = {
+    const direction: mc.Vector3 = {
         x: velocity.x / speed,
         y: velocity.y / speed,
         z: velocity.z / speed
@@ -137,7 +104,7 @@ export function getForwardHit(pl) {
         });
         if (hit === undefined) return undefined;
 
-        const hitPoint = {
+        const hitPoint: mc.Vector3 = {
             x: hit.block.location.x + hit.faceLocation.x,
             y: hit.block.location.y + hit.faceLocation.y,
             z: hit.block.location.z + hit.faceLocation.z
@@ -150,12 +117,7 @@ export function getForwardHit(pl) {
     }
 }
 
-/**
- * @param { mc.Vector3 } velocity
- * @param { mc.Direction } face
- * @returns { number }
- */
-export function getSideImpactSpeed(velocity, face) {
+export function getSideImpactSpeed(velocity: mc.Vector3, face: mc.Direction): number {
     const horizontalSpeed = Math.hypot(velocity.x, velocity.z);
     if (face === mc.Direction.North || face === mc.Direction.South) {
         return Math.max(0, horizontalSpeed - Math.abs(velocity.x));
@@ -166,17 +128,12 @@ export function getSideImpactSpeed(velocity, face) {
     return 0;
 }
 
-/**
- * @param { mc.Player } pl
- * @returns { GpwsWarning[] }
- */
-export function getGpwsWarnings(pl) {
+export function getGpwsWarnings(pl: mc.Player): GpwsWarning[] {
     if (!pl.isGliding) return [];
 
     const velocity = pl.getVelocity();
     const altitude = calcAlt(pl);
-    /** @type { GpwsWarning[] } */
-    const warnings = [];
+    const warnings: GpwsWarning[] = [];
 
     // 鞘翅耐久属于持续警告，不随起飞/接地阶段静默。
     const elytraDamage = getDurabilityPercent(pl);
@@ -249,11 +206,7 @@ export function getGpwsWarnings(pl) {
     return warnings;
 }
 
-/**
- * @param { mc.Player } pl
- * @returns { number }
- */
-export function getDurabilityPercent(pl) {
+export function getDurabilityPercent(pl: mc.Player): number {
     if (!pl.isValid) return NaN;
     const equippableComp = pl.getComponent(mc.EntityComponentTypes.Equippable);
     if (!equippableComp?.isValid) return NaN;
@@ -265,29 +218,18 @@ export function getDurabilityPercent(pl) {
 }
 
 
-/**
- * @param { FlightConsole } data
- * @param { mc.Player } pl
- * @returns { string }
- */
-export function getConsoleText(data, pl) {
+export function getConsoleText(data: FlightConsole, pl: mc.Player): string {
     const velocity = pl.getVelocity();
-    /** @type { mc.VectorXZ } */
-    const groundVelocity = { x: velocity.x, z: velocity.z };
+    const groundVelocity: mc.VectorXZ = { x: velocity.x, z: velocity.z };
     const speed = mcmath.Vector3Utils.magnitude(velocity);
     const groundSpeed = mcmath.VectorXZUtils.magnitude(groundVelocity);
-    /** @type { mc.VectorXZ } */
-    const currentLoc = { x: pl.location.x, z: pl.location.z };
+    const currentLoc: mc.VectorXZ = { x: pl.location.x, z: pl.location.z };
     const gpwsWarnings = getGpwsWarnings(pl);
     const gpwsLine = [
         ...gpwsWarnings.filter(warning => warning.alert).map(warning => `§r§l§c${warning.text}`),
         ...gpwsWarnings.filter(warning => !warning.alert).map(warning => `§r§l§e${warning.text}`)
     ].join('  ');
-    /**
-     * @param { string } text
-     * @returns { boolean }
-     */
-    const hasWarning = (text) => gpwsWarnings.some(warning => warning.text === text);
+    const hasWarning = (text: string): boolean => gpwsWarnings.some(warning => warning.text === text);
     const warnPullUp = hasWarning(GPWS_ALERT_PULL_UP);
     const warnStall = hasWarning(GPWS_ALERT_STALL);
     const warnSinkRate = hasWarning(GPWS_CAUTION_SINK_RATE);

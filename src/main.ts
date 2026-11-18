@@ -1,21 +1,14 @@
-// @ts-check
-'use strict';
-
 import * as mc from '@minecraft/server';
 import * as vanilla from '@minecraft/vanilla-data';
 import * as utils from './utils';
 import * as config from './config';
 import * as texts from './texts';
 
-/**
- * @param { mc.ItemStack | undefined } itemStack
- * @returns { boolean }
- */
-const isFlightStick = (itemStack) =>
+const isFlightStick = (itemStack: mc.ItemStack | undefined): boolean =>
     itemStack?.typeId === vanilla.MinecraftItemTypes.Stick &&
     itemStack?.nameTag === texts.STICK_NAME;
 
-const stick = () => {
+const stick = (): mc.ItemStack => {
     const stk = new mc.ItemStack(vanilla.MinecraftItemTypes.Stick, 1);
     stk.nameTag = texts.STICK_NAME;
     stk.setLore(texts.STICK_LORE_LIST);
@@ -135,8 +128,7 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
                 ap.disableReason = texts.AP_DISABLE_WP_UD;
             }
             else {
-                /** @type { mc.VectorXZ } */
-                const currentLoc = {
+                const currentLoc: mc.VectorXZ = {
                     x: p.location.x,
                     z: p.location.z
                 };
@@ -162,8 +154,7 @@ mc.world.afterEvents.itemUse.subscribe(eventData => {
             const ap = consoleData.ap;
             if (!ap.status) return;
             if (!ap.waypoint) return;
-            /** @type { mc.VectorXZ } */
-            const currentLoc = {
+            const currentLoc: mc.VectorXZ = {
                 x: p.location.x,
                 z: p.location.z
             };

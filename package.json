@@ -17,13 +17,19 @@
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('scripts', { recursive: true, force: true })\"",
     "check": "tsc -p . --noEmit",
-    "build": "npm run clean && tsc -p .",
-    "watch": "tsc -p . --watch --preserveWatchOutput"
+    "check:watch": "tsc -p . --noEmit --watch --preserveWatchOutput",
+    "build": "npm run check && npm run clean && esbuild src/main.ts --bundle --format=esm --external:@minecraft/server --outfile=scripts/main.js",
+    "build:debug": "npm run check && npm run clean && esbuild src/main.ts --bundle --format=esm --external:@minecraft/server --outfile=scripts/main.js --sourcemap=inline --sources-content=false",
+    "watch": "esbuild src/main.ts --bundle --format=esm --external:@minecraft/server --outfile=scripts/main.js --watch",
+    "watch:debug": "esbuild src/main.ts --bundle --format=esm --external:@minecraft/server --outfile=scripts/main.js --watch --sourcemap=inline --sources-content=false",
+    "map:error": "node tools/map-error.mjs"
   },
   "devDependencies": {
     "@minecraft/math": "^2.4.1",
     "@minecraft/server": "^2.11.0",
     "@minecraft/vanilla-data": "^1.26.60",
+    "esbuild": "^0.28.2",
+    "source-map": "^0.8.0",
     "typescript": "^7.0.2"
   }
 }

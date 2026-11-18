@@ -9,9 +9,9 @@ licenses that apply to them. The project's own license is kept separately in
 The project uses the following packages published by Mojang AB:
 
 - `@minecraft/server` — runtime dependency, declared in `manifest.json` and not
-  bundled into `scripts/air.js`;
-- `@minecraft/vanilla-data` — bundled into `scripts/air.js`;
-- `@minecraft/math` — bundled into `scripts/air.js`.
+  bundled into `scripts/main.js`;
+- `@minecraft/vanilla-data` — bundled into `scripts/main.js`;
+- `@minecraft/math` — bundled into `scripts/main.js`.
 
 These packages are licensed under the MIT License:
 

@@ -17,7 +17,7 @@
 
 ## 环境要求
 
-- Minecraft Bedrock，建议 1.21.0 及以上，且游戏版本需要支持 `@minecraft/server` 2.10.0。
+- Minecraft Bedrock 1.21.90 及以上，且游戏版本需要支持 `@minecraft/server` 2.10.0。
 - 需要启用行为包；本包不包含资源包。
 
 ## 安装
@@ -156,7 +156,7 @@ ActionBar 会显示：
 
 ## 可调参数
 
-参数集中在 [`src/config.js`](src/config.js)：
+参数集中在 [`src/config.ts`](src/config.ts)：
 
 | 参数 | 默认值 | 说明 |
 | --- | --- | --- |
@@ -178,11 +178,11 @@ ActionBar 会显示：
 | `AP_DISTANCE_REQUIREMENT` | `50` | 小于等于该距离时视为到达航点附近 |
 | `FW_DATA` | `3` | 发放的烟花飞行时间，范围 1–3 |
 
-修改这些值后，需要重新生成 [`scripts/air.js`](scripts/air.js)。
+修改这些值后，需要重新生成 [`scripts/main.js`](scripts/main.js)。
 
 ## 开发与构建
 
-- `src/` 是源码，[`scripts/air.js`](scripts/air.js) 是已经打包好的脚本，也是 `manifest.json` 的入口。
+- `src/` 是 TypeScript 源码，[`scripts/main.js`](scripts/main.js) 是已经打包好的脚本，也是 `manifest.json` 的入口。
 - 构建依赖记录在 [`package.json`](package.json) 和 `package-lock.json` 中；需要 Node.js 18+。
 - 首次安装依赖：
 
@@ -190,7 +190,13 @@ ActionBar 会显示：
 npm ci
 ```
 
-- 单次构建：
+- 类型检查：
+
+```bash
+npm run check
+```
+
+- 单次构建（类型检查 + esbuild 打包）：
 
 ```bash
 npm run build
@@ -202,17 +208,65 @@ npm run build
 npm run watch
 ```
 
-构建使用 esbuild，将 `@minecraft/server` 作为 external，`@minecraft/math` 和 `@minecraft/vanilla-data` 一起打包进 `scripts/air.js`。
+- 如果需要同时监听类型错误，另开一个终端运行：
 
-`node_modules/` 已加入 [`.gitignore`](.gitignore)，不要提交。提交前确认 `scripts/air.js` 已更新，否则游戏和 Release 里运行的仍是旧代码。
+```bash
+npm run check:watch
+```
+
+构建使用 `tsc --noEmit` 做类型检查，再由 esbuild 将 `src/main.ts` 打包为 `scripts/main.js`。`@minecraft/server` 作为游戏原生模块保持 external，不打包；`@minecraft/math` 和 `@minecraft/vanilla-data` 一起打包进 `scripts/main.js`。
+
+当前未使用 `@minecraft/server-ui`。以后需要引入时，请同时在 `package.json` 的 devDependencies、`manifest.json` 的 dependencies 和 esbuild 的 external 参数中加入该模块。
+
+### 把游戏报错定位回 TypeScript
+
+游戏终端里的报错只会显示编译后的位置，例如：
+
+```text
+main.js:123:45
+```
+
+生产构建默认不包含 source map。需要调试时，先生成带 inline source map 的调试包：
+
+```bash
+npm run build:debug
+```
+
+或者持续监听：
+
+```bash
+npm run watch:debug
+```
+
+然后在项目根目录执行：
+
+```bash
+npm run map:error -- 123 45
+```
+
+会输出类似：
+
+```text
+src/utils.ts:67:12
+```
+
+其中 `123` 是 `main.js` 的行号，`45` 是列号；工具按 Minecraft 常见的 1-based 列号处理。调试结束后重新运行：
+
+```bash
+npm run build
+```
+
+恢复不带 source map 的生产包。`npm run build:debug` 生成的 `scripts/main.js` 会更大，不要提交这个调试版本。
+
+`node_modules/` 已加入 [`.gitignore`](.gitignore)，不要提交。提交前确认 `scripts/main.js` 已更新，否则游戏和 Release 里运行的仍是旧代码。
 
 GitHub Actions 的打包流程见 [`.github/workflows/package.yml`](.github/workflows/package.yml)：
 
 - push 到 `main`：生成 Actions artifact；
 - push `v*` tag：生成 `.mcpack` 并上传到对应的 GitHub Release；
-- Workflow 不执行 esbuild，直接使用已提交的 `scripts/air.js`；
+- Workflow 不执行 esbuild，直接使用已提交的 `scripts/main.js`；
 - 打包时使用显式白名单，只允许 `manifest.json`、`README.md`、`LICENSE`、`THIRD_PARTY_NOTICES.md` 和 manifest 指定的脚本入口；出现其他文件会直接失败；
-- 打包内容只包含上述文件（当前脚本入口为 `scripts/air.js`）；`scripts/` 下的其他文件、`src/`、`node_modules/`、`package*.json` 等不会进入 mcpack。
+- 打包内容只包含上述文件（当前脚本入口为 `scripts/main.js`）；`scripts/` 下的其他文件、`src/`、`node_modules/`、`package*.json` 等不会进入 mcpack。
 
 发版示例：
 
