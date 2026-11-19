@@ -1,16 +1,35 @@
 {
-  "license": "AGPL-3.0-only",
-  "scripts": {
-    "build": "esbuild src/main.js --bundle --format=esm --external:@minecraft/server --outfile=scripts/air.js",
-    "watch": "esbuild src/main.js --bundle --format=esm --external:@minecraft/server --outfile=scripts/air.js --watch"
+  "name": "cmdcorp_air",
+  "version": "3.0.0",
+  "description": "天空即为极限 - 行为包",
+  "homepage": "https://github.com/cmdcorp6534/MCBE-Air#readme",
+  "bugs": {
+    "url": "https://github.com/cmdcorp6534/MCBE-Air/issues"
   },
-  "dependencies": {
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cmdcorp6534/MCBE-Air.git"
+  },
+  "license": "AGPL-3.0-only",
+  "author": "cmdcorp6534",
+  "type": "module",
+  "main": "scripts/main.js",
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('scripts', { recursive: true, force: true })\"",
+    "check": "tsc -p . --noEmit",
+    "check:watch": "tsc -p . --noEmit --watch --preserveWatchOutput",
+    "build": "npm run check && npm run clean && node esbuild.config.mjs",
+    "build:debug": "npm run check && npm run clean && node esbuild.config.mjs --debug",
+    "watch": "node esbuild.config.mjs --watch",
+    "watch:debug": "node esbuild.config.mjs --watch --debug",
+    "map:error": "node tools/map-error.mjs"
+  },
+  "devDependencies": {
     "@minecraft/math": "^2.4.1",
     "@minecraft/server": "^2.11.0",
     "@minecraft/vanilla-data": "^1.26.60",
-    "esbuild": "^0.28.2"
-  },
-  "allowScripts": {
-    "esbuild@0.28.2": true
+    "esbuild": "^0.28.2",
+    "source-map": "^0.8.0",
+    "typescript": "^7.0.2"
   }
 }

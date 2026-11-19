@@ -1,8 +1,5 @@
-// @ts-check
-'use strict';
-
 export const STICK_NAME = '飞行面板';
-export const STICK_LORE_LIST = [
+export const STICK_LORE_LIST: string[] = [
     '使用此物品打开飞行面板',
     '电脑端请按鼠标右键',
     '移动端请长按屏幕'
