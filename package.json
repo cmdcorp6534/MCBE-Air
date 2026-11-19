@@ -18,10 +18,10 @@
     "clean": "node -e \"require('fs').rmSync('scripts', { recursive: true, force: true })\"",
     "check": "tsc -p . --noEmit",
     "check:watch": "tsc -p . --noEmit --watch --preserveWatchOutput",
-    "build": "npm run check && npm run clean && esbuild src/main.ts --bundle --format=esm --external:@minecraft/server --outfile=scripts/main.js",
-    "build:debug": "npm run check && npm run clean && esbuild src/main.ts --bundle --format=esm --external:@minecraft/server --outfile=scripts/main.js --sourcemap=inline --sources-content=false",
-    "watch": "esbuild src/main.ts --bundle --format=esm --external:@minecraft/server --outfile=scripts/main.js --watch",
-    "watch:debug": "esbuild src/main.ts --bundle --format=esm --external:@minecraft/server --outfile=scripts/main.js --watch --sourcemap=inline --sources-content=false",
+    "build": "npm run check && npm run clean && node esbuild.config.mjs",
+    "build:debug": "npm run check && npm run clean && node esbuild.config.mjs --debug",
+    "watch": "node esbuild.config.mjs --watch",
+    "watch:debug": "node esbuild.config.mjs --watch --debug",
     "map:error": "node tools/map-error.mjs"
   },
   "devDependencies": {

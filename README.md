@@ -214,7 +214,7 @@ npm run watch
 npm run check:watch
 ```
 
-构建使用 `tsc --noEmit` 做类型检查，再由 esbuild 将 `src/main.ts` 打包为 `scripts/main.js`。`@minecraft/server` 作为游戏原生模块保持 external，不打包；`@minecraft/math` 和 `@minecraft/vanilla-data` 一起打包进 `scripts/main.js`。
+构建使用 `tsc --noEmit` 做类型检查，再由 esbuild 将 `src/main.ts` 打包为 `scripts/main.js`。`@minecraft/server` 作为游戏原生模块保持 external，不打包；`@minecraft/math` 和 `@minecraft/vanilla-data` 一起打包进 `scripts/main.js`。esbuild 配置集中在 [`esbuild.config.mjs`](esbuild.config.mjs)。
 
 当前未使用 `@minecraft/server-ui`。以后需要引入时，请同时在 `package.json` 的 devDependencies、`manifest.json` 的 dependencies 和 esbuild 的 external 参数中加入该模块。
 
