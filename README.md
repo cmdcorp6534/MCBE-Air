@@ -27,7 +27,7 @@
 3. 进入世界设置 → **行为包**，激活“天空即为极限”。
 4. 进入世界即可使用。
 
-开发时也可以直接把本目录放进 `development_behavior_packs` 下测试。
+开发时先运行 `npm ci && npm run build` 生成 `scripts/main.js`，再把本目录放进 `development_behavior_packs` 下测试。
 
 ## 快速开始
 
@@ -178,11 +178,12 @@ ActionBar 会显示：
 | `AP_DISTANCE_REQUIREMENT` | `50` | 小于等于该距离时视为到达航点附近 |
 | `FW_DATA` | `3` | 发放的烟花飞行时间，范围 1–3 |
 
-修改这些值后，需要重新生成 [`scripts/main.js`](scripts/main.js)。
+修改这些值后，需要重新运行 `npm run build` 生成 `scripts/main.js`。
 
 ## 开发与构建
 
-- `src/` 是 TypeScript 源码，[`scripts/main.js`](scripts/main.js) 是已经打包好的脚本，也是 `manifest.json` 的入口。
+- `src/` 是 TypeScript 源码；`scripts/main.js` 是构建产物，也是 `manifest.json` 的入口。
+- `scripts/` 已加入 [`.gitignore`](.gitignore)，不提交到仓库；本地构建或 Release workflow 会生成它。
 - 构建依赖记录在 [`package.json`](package.json) 和 `package-lock.json` 中；需要 Node.js 18+。
 - 首次安装依赖：
 
@@ -256,21 +257,24 @@ src/utils.ts:67:12
 npm run build
 ```
 
-恢复不带 source map 的生产包。`npm run build:debug` 生成的 `scripts/main.js` 会更大，不要提交这个调试版本。
+恢复不带 source map 的生产包。`scripts/main.js` 已被 `.gitignore` 忽略，不要提交调试版本。
 
-`node_modules/` 已加入 [`.gitignore`](.gitignore)，不要提交。提交前确认 `scripts/main.js` 已更新，否则游戏和 Release 里运行的仍是旧代码。
+`node_modules/` 和 `scripts/` 都已加入 [`.gitignore`](.gitignore)，不要提交。发布 workflow 会在构建后自行生成 `scripts/main.js`。
 
 GitHub Actions 的打包流程见 [`.github/workflows/package.yml`](.github/workflows/package.yml)：
 
-- push 到 `main`：生成 Actions artifact；
-- push `v*` tag：生成 `.mcpack` 并上传到对应的 GitHub Release；
-- Workflow 不执行 esbuild，直接使用已提交的 `scripts/main.js`；
+- push `v*` tag：构建 `.mcpack` 并上传到对应的 GitHub Release；
+- tag 必须指向 `main` 历史中的提交；workflow 会检查 tag 是否是 `origin/main` 的祖先，不是则直接失败；
+- 手动触发 workflow：构建所选 ref 的 `.mcpack` 并上传为 Actions artifact，不创建 Release；
+- Workflow 会执行 `npm ci` 和 `npm run build`，不再依赖仓库中提交的 `scripts/main.js`；
 - 打包时使用显式白名单，只允许 `manifest.json`、`README.md`、`LICENSE`、`THIRD_PARTY_NOTICES.md` 和 manifest 指定的脚本入口；出现其他文件会直接失败；
 - 打包内容只包含上述文件（当前脚本入口为 `scripts/main.js`）；`scripts/` 下的其他文件、`src/`、`node_modules/`、`package*.json` 等不会进入 mcpack。
 
-发版示例：
+发版时先合并到 `main`，再从 `main` 创建 tag：
 
 ```bash
+git switch main
+git pull --ff-only origin main
 git tag v1.0.0
 git push origin v1.0.0
 ```
