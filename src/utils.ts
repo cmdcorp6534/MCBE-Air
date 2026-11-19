@@ -242,9 +242,9 @@ export function getConsoleText(data: FlightConsole, pl: mc.Player): string {
     const txt = [
         '§r------',
         `§r§l${texts.CHOICE_TITLE}`,
-        `§r${(data.choice?.id === 1) ? '>' : ''}${texts.AP}  §r${(data.choice?.id === 2) ? '>' : ''}${texts.ELY}`,
+        `§r${(data.choice?.id === 1) ? '>' : ' '}${texts.AP}  §r${(data.choice?.id === 2) ? '>' : ' '}${texts.ELY}`,
         // `§r${(data.choice?.id === 2) ? '*' : ' '} ${texts.ELY}`,
-        `§r${(data.choice?.id === 3) ? '>' : ''}${texts.FWR}  §r${(data.choice?.id === 4) ? '>' : ''}${texts.EXIT}`,
+        `§r${(data.choice?.id === 3) ? '>' : ' '}${texts.FWR}  §r${(data.choice?.id === 4) ? '>' : ' '}${texts.EXIT}`,
         // `§r${(data.choice?.id === 4) ? '*' : ' '} ${texts.EXIT}`,
         `§r§a${(data.choice !== undefined) ? data.choice.remains : 'N/A'}`,
         '§r------',
